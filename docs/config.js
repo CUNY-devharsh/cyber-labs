@@ -15,7 +15,11 @@ window.LAB_CONFIG = {
   owner: "",
   repo: "",
 
-  /* Codespaces machine names: basicLinux32gb is 2 cores, standardLinux32gb is 4 cores. */
+  /*
+    Codespaces machine names: basicLinux32gb is 2 cores, standardLinux32gb is 4 cores.
+    Every new machine starts on the smallest size. The machine field of each
+    environment below only sets the label shown on the page.
+  */
   machines: {
     basicLinux32gb: { cores: 2, label: "2 cores, 8 GB memory" },
     standardLinux32gb: { cores: 4, label: "4 cores, 16 GB memory" }
@@ -60,10 +64,10 @@ window.LAB_CONFIG = {
       name: "Windows Server 2019",
       summary: "Windows Server 2019 with the desktop, in a browser tab. The lightest Windows choice and the version MAC 233 teaches.",
       devcontainerPath: ".devcontainer/windows-server-2019/devcontainer.json",
-      machine: "standardLinux32gb",
-      altMachine: "basicLinux32gb",
+      machine: "basicLinux32gb",
       firstStart: "The first start downloads Windows (about 5 GB) and installs it by itself. Keep the tab open and plan for a long wait.",
       signIn: "User Docker, password admin",
+      tip: "Slow? Change the machine type to 4 cores at github.com/codespaces.",
       opens: "The Windows screen opens in a new tab.",
       status: "beta"
     },
@@ -73,10 +77,10 @@ window.LAB_CONFIG = {
       name: "Windows Server 2022",
       summary: "Windows Server 2022 with the desktop, in a browser tab.",
       devcontainerPath: ".devcontainer/windows-server-2022/devcontainer.json",
-      machine: "standardLinux32gb",
-      altMachine: "basicLinux32gb",
+      machine: "basicLinux32gb",
       firstStart: "The first start downloads Windows (about 6 GB) and installs it by itself. Keep the tab open and plan for a long wait.",
       signIn: "User Docker, password admin",
+      tip: "Slow? Change the machine type to 4 cores at github.com/codespaces.",
       opens: "The Windows screen opens in a new tab.",
       status: "beta"
     },
@@ -86,9 +90,10 @@ window.LAB_CONFIG = {
       name: "Windows Server 2025",
       summary: "The newest Windows Server. It is the largest download and needs the most disk space, so it is the most likely to run out of room.",
       devcontainerPath: ".devcontainer/windows-server-2025/devcontainer.json",
-      machine: "standardLinux32gb",
+      machine: "basicLinux32gb",
       firstStart: "The first start downloads Windows (about 8 GB) and installs it by itself. Keep the tab open and plan for a long wait.",
       signIn: "User Docker, password admin",
+      tip: "Slow? Change the machine type to 4 cores at github.com/codespaces.",
       opens: "The Windows screen opens in a new tab.",
       status: "beta"
     }

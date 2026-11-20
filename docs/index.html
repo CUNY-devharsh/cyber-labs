@@ -51,7 +51,7 @@
 <section class="section" id="machines" aria-labelledby="machines-title">
   <div class="wrap">
     <h2 id="machines-title">Lab machines</h2>
-    <p class="section-intro">Each button opens GitHub, where you press Create codespace. If you already made that machine, GitHub offers to resume it.</p>
+    <p class="section-intro">Each button opens GitHub, where you press Create new codespace. If you already made that machine, GitHub offers to resume it.</p>
     <p class="notice" id="setup-notice" hidden></p>
     <noscript><p class="notice">This page needs JavaScript to build the launch buttons. You can also open the repository on GitHub and choose Code, then Codespaces.</p></noscript>
     <ul class="roster" id="roster"></ul>
@@ -68,7 +68,7 @@
       </li>
       <li>
         <h3>Press a Launch button</h3>
-        <p>GitHub opens a page for the machine you chose. Press Create codespace. Do not change the settings unless your instructor says so.</p>
+        <p>GitHub opens a page for the machine you chose. Press Create new codespace. You do not need Change options.</p>
       </li>
       <li>
         <h3>Wait for the machine</h3>
@@ -142,7 +142,11 @@
       </details>
       <details>
         <summary>Windows shows an error about KVM or runs out of disk space</summary>
-        <p>Delete the machine at github.com/codespaces and launch Windows Server 2019 again with the 4 core size. If it fails twice, send your instructor a screenshot of the message.</p>
+        <p>Delete the machine at github.com/codespaces and launch Windows Server 2019 again. If it fails twice, send your instructor a screenshot of the message.</p>
+      </details>
+      <details>
+        <summary>Windows is very slow</summary>
+        <p>Every machine starts on 2 cores. Stop the machine, open github.com/codespaces, open the menu at the end of its row and choose Change machine type. Pick 4-core and start the machine again. A 4 core machine uses your free hours twice as fast.</p>
       </details>
       <details>
         <summary>GitHub says I have no hours left</summary>

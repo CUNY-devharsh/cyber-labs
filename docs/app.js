@@ -42,12 +42,16 @@
 
   var repository = findRepository();
 
-  function launchUrl(env, machine) {
+  /*
+    quickstart=1 makes GitHub offer to resume a machine the student already has.
+    GitHub ignores a machine size on that page and starts on the smallest size,
+    so the link does not ask for one.
+  */
+  function launchUrl(env) {
     if (!repository) return null;
     var query = new URLSearchParams();
     query.set("quickstart", "1");
     query.set("devcontainer_path", env.devcontainerPath);
-    if (machine) query.set("machine", machine);
     return "https://codespaces.new/" + repository.owner + "/" + repository.repo + "?" + query.toString();
   }
 
@@ -89,24 +93,17 @@
     item.appendChild(about);
 
     var facts = el("ul", { "class": "machine-facts" });
-    [machineLabel(env.machine), env.firstStart, env.signIn, env.opens].forEach(function (fact) {
+    [machineLabel(env.machine), env.firstStart, env.signIn, env.opens, env.tip].forEach(function (fact) {
       if (fact) facts.appendChild(el("li", null, fact));
     });
     item.appendChild(facts);
 
     var go = el("div", { "class": "machine-go" });
-    var url = launchUrl(env, env.machine);
+    var url = launchUrl(env);
     var button = el("a", { "class": "launch", target: "_blank", rel: "noopener" }, "Launch " + env.name);
     if (url) button.setAttribute("href", url);
     else button.setAttribute("aria-disabled", "true");
     go.appendChild(button);
-    if (env.altMachine && machines[env.altMachine]) {
-      var altUrl = launchUrl(env, env.altMachine);
-      var alt = el("a", { "class": "launch-alt", target: "_blank", rel: "noopener" },
-        "Use " + machines[env.altMachine].cores + " cores instead (slower, uses half the hours)");
-      if (altUrl) alt.setAttribute("href", altUrl);
-      go.appendChild(alt);
-    }
     item.appendChild(go);
     return item;
   }

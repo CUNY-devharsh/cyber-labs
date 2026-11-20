@@ -2,6 +2,8 @@
 
 Kali Linux 2026 and Windows Server in a browser tab, for MAC courses at LaGuardia Community College.
 
+Site: https://cuny-devharsh.github.io/cyber-labs/
+
 Students open the site, pick a machine, and press Launch. The machine starts in GitHub Codespaces and shows up in their browser. They need a free GitHub account and nothing else.
 
 Student guide for the Kali machines: [START-HERE.md](START-HERE.md). The rest of this file is for the instructor.
@@ -21,13 +23,15 @@ GitHub Pages only serves files. It cannot run an operating system. Running Kali 
 | --- | --- | --- | --- |
 | Kali Linux terminal | `.devcontainer/devcontainer.json` | 2 cores | Terminal in the editor page |
 | Kali Linux desktop | `.devcontainer/kali-desktop/devcontainer.json` | 2 cores | XFCE desktop through noVNC on port 6080 |
-| Windows Server 2019 | `.devcontainer/windows-server-2019/devcontainer.json` | 4 cores | Web viewer on port 8006 |
-| Windows Server 2022 | `.devcontainer/windows-server-2022/devcontainer.json` | 4 cores | Web viewer on port 8006 |
-| Windows Server 2025 | `.devcontainer/windows-server-2025/devcontainer.json` | 4 cores | Web viewer on port 8006 |
+| Windows Server 2019 | `.devcontainer/windows-server-2019/devcontainer.json` | 2 cores | Web viewer on port 8006 |
+| Windows Server 2022 | `.devcontainer/windows-server-2022/devcontainer.json` | 2 cores | Web viewer on port 8006 |
+| Windows Server 2025 | `.devcontainer/windows-server-2025/devcontainer.json` | 2 cores | Web viewer on port 8006 |
 
 Kali is built from the official `kalilinux/kali-rolling` image (version 2026.3 on the build date, November 20, 2026). User `kali`, password `kali`, sudo without a password, time zone America/New_York.
 
 Windows Server uses the open source [dockur/windows](https://github.com/dockur/windows) container and follows that project's own Codespaces setup. On first start it downloads the evaluation ISO from Microsoft and installs it without input. User `Docker`, password `admin`. No Microsoft files are stored in this repository.
+
+Every machine starts on 2 cores, the smallest size. GitHub ignores a machine size in a launch link that offers to resume a machine. A student who wants 4 cores stops the machine and picks Change machine type at https://github.com/codespaces. To force 4 cores for one machine, add `"hostRequirements": { "cpus": 4 }` to its dev container file.
 
 ## Publish the site (one time)
 
@@ -46,7 +50,7 @@ Run each machine once from the published site with your own account.
 
 1. Kali Linux terminal. Run `lab-info`, then `sudo nmap -sS -p 80 127.0.0.1`.
 2. Kali Linux desktop. Wait for the desktop tab, open a terminal and Firefox.
-3. Windows Server 2019 on 4 cores. Watch the viewer tab until the Windows desktop appears. Note how long it takes and write that into `docs/config.js`.
+3. Windows Server 2019. Watch the viewer tab until the Windows desktop appears. Note how long it takes and write that into `docs/config.js`.
 4. Stop one machine, start it again, and check that it comes back.
 5. Delete the test machines at https://github.com/codespaces.
 
@@ -65,13 +69,13 @@ The Windows machines are marked Beta on the site. After a machine passes, change
 | Windows container starts and requests the Server 2019 evaluation ISO from Microsoft | Passed up to the download, which the build sandbox blocked |
 | Windows Server install and desktop inside a real codespace | Not tested. The build sandbox has no KVM. Run step 3 above |
 | Launcher site in Chrome at desktop and phone widths | Passed. No console errors, no sideways scrolling |
-| Launch links opened on github.com | Not tested. They need the published repository |
+| Launch links opened on github.com | Passed. Each link opens the Create codespace page with the right dev container |
 
 ## Change things
 
 | To change | Edit |
 | --- | --- |
-| Courses, machine text, Beta tags, default sizes | `docs/config.js` |
+| Courses, machine text, Beta tags | `docs/config.js` |
 | Page wording outside the machine list | `docs/index.html` |
 | Colors and layout | `docs/styles.css` |
 | Kali tools installed by default | The package list in `.devcontainer/kali/Dockerfile` |
