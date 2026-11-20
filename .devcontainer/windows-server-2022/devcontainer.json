@@ -1,0 +1,21 @@
+{
+  "name": "Windows Server 2022",
+  "service": "windows",
+  "containerEnv": {
+    "VERSION": "2022"
+  },
+  "forwardPorts": [
+    8006
+  ],
+  "portsAttributes": {
+    "8006": {
+      "label": "Windows Server 2022",
+      "onAutoForward": "openBrowser"
+    }
+  },
+  "otherPortsAttributes": {
+    "onAutoForward": "ignore"
+  },
+  "dockerComposeFile": "../windows/compose.yml",
+  "initializeCommand": "docker system prune --all --force"
+}

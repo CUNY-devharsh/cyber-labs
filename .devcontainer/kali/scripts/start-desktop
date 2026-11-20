@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+# Starts (or restarts) the Kali desktop and the noVNC web client on port 6080.
+# The VNC server listens on localhost only. The browser reaches it through the
+# forwarded port, which GitHub keeps private to the codespace owner by default.
+#
+#   start-desktop            start whatever is not running
+#   start-desktop --restart  stop everything first, then start
+set -uo pipefail
+
+DISPLAY_NUM=1
+VNC_PORT=$((5900 + DISPLAY_NUM))
+WEB_PORT="${LAB_DESKTOP_PORT:-6080}"
+GEOMETRY="${LAB_DESKTOP_GEOMETRY:-1440x900}"
+LOG_DIR="${HOME}/.cache/lab-desktop"
+mkdir -p "${LOG_DIR}"
+
+# True when something accepts connections on the given local port.
+port_open() { (exec 3<>"/dev/tcp/127.0.0.1/$1") 2>/dev/null; }
+
+wait_for_port() {
+  local port="$1" tries=0
+  until port_open "${port}"; do
+    tries=$((tries + 1))
+    [ "${tries}" -ge 40 ] && return 1
+    sleep 0.5
+  done
+}
+
+if [ "${1:-}" = "--restart" ]; then
+  tigervncserver -kill ":${DISPLAY_NUM}" >/dev/null 2>&1 || true
+  pkill -u "$(id -u)" -x websockify >/dev/null 2>&1 || true
+  pkill -u "$(id -u)" -f "/usr/bin/websockify" >/dev/null 2>&1 || true
+  sleep 1
+fi
+
+if ! port_open "${VNC_PORT}"; then
+  # Clear leftovers from a previous run (for example after the codespace stopped).
+  rm -f "/tmp/.X${DISPLAY_NUM}-lock" "/tmp/.X11-unix/X${DISPLAY_NUM}" "${HOME}"/.vnc/*.pid 2>/dev/null
+  tigervncserver ":${DISPLAY_NUM}" \
+    -geometry "${GEOMETRY}" -depth 24 \
+    -localhost yes -SecurityTypes None --I-KNOW-THIS-IS-INSECURE \
+    -xstartup /usr/local/bin/kali-xstartup \
+    >"${LOG_DIR}/vnc.log" 2>&1
+fi
+
+if ! port_open "${WEB_PORT}"; then
+  websockify -D --log-file "${LOG_DIR}/novnc.log" \
+    --web /usr/share/novnc "${WEB_PORT}" "localhost:${VNC_PORT}" >/dev/null 2>&1
+fi
+
+if wait_for_port "${VNC_PORT}" && wait_for_port "${WEB_PORT}"; then
+  echo "Kali desktop is running. Open the forwarded port ${WEB_PORT} (Ports tab) in your browser."
+else
+  echo "The desktop did not start. See the logs in ${LOG_DIR}, then run: start-desktop --restart" >&2
+  exit 1
+fi

@@ -1,0 +1,3 @@
+# Windows virtual disk created inside a codespace
+.devcontainer/windows/storage/
+.DS_Store

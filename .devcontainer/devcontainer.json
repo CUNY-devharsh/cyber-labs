@@ -1,0 +1,44 @@
+{
+  "name": "Kali Linux 2026 terminal",
+  "build": {
+    "dockerfile": "kali/Dockerfile",
+    "context": "kali",
+    "target": "terminal"
+  },
+  "remoteUser": "kali",
+  "init": true,
+  "capAdd": [
+    "NET_ADMIN",
+    "NET_RAW"
+  ],
+  "runArgs": [
+    "--hostname=kali"
+  ],
+  "customizations": {
+    "codespaces": {
+      "openFiles": [
+        "START-HERE.md"
+      ]
+    },
+    "vscode": {
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "zsh",
+        "terminal.integrated.profiles.linux": {
+          "zsh": {
+            "path": "/usr/bin/zsh",
+            "args": [
+              "-l"
+            ]
+          }
+        },
+        "workbench.startupEditor": "none",
+        "files.exclude": {
+          "docs": true,
+          ".devcontainer": true,
+          ".github": true,
+          ".gitignore": true
+        }
+      }
+    }
+  }
+}

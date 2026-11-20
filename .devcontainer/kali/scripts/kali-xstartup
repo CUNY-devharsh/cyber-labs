@@ -1,0 +1,6 @@
+#!/bin/sh
+# Session started by the VNC server: a normal Kali XFCE desktop.
+unset SESSION_MANAGER DBUS_SESSION_BUS_ADDRESS
+export XDG_SESSION_TYPE=x11
+export XDG_CURRENT_DESKTOP=XFCE
+exec dbus-launch --exit-with-session startxfce4

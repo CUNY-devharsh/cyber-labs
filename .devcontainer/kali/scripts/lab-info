@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Prints a short description of this lab machine.
+set -u
+. /etc/os-release 2>/dev/null || true
+line() { printf '  %-14s %s\n' "$1" "$2"; }
+echo
+echo "Lab machine"
+line "System"   "${PRETTY_NAME:-Kali GNU/Linux} ${VERSION_ID:-}"
+line "User"     "$(id -un) (password: kali, sudo needs no password)"
+line "Hostname" "$(hostname)"
+line "Address"  "$(hostname -I 2>/dev/null | awk '{print $1}')"
+line "Kernel"   "$(uname -r) (the host kernel; this Kali runs in a container)"
+line "Time zone" "${TZ:-UTC}"
+line "CPU / RAM" "$(nproc) cores, $(awk '/MemTotal/{printf "%.0f GB", $2/1048576}' /proc/meminfo)"
+line "Disk free" "$(df -h --output=avail / | tail -1 | tr -d ' ')"
+echo
+echo "Installed tools (checked now)"
+for t in nmap ncat tcpdump tshark hydra john hashcat sqlmap nikto gobuster ffuf smbclient openssl gpg gdb python3 msfconsole burpsuite zaproxy wireshark zenmap firefox-esr; do
+  if command -v "$t" >/dev/null 2>&1; then printf '  [x] %s\n' "$t"; else printf '  [ ] %s\n' "$t"; fi
+done | column -c 78
+echo
+echo "Anything else in Kali:  sudo apt update && sudo apt install <package>"
+echo "Bigger tool sets:       lab-install"
+echo

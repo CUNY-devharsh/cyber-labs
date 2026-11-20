@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cyber Labs: Kali Linux and Windows Server in a browser tab</title>
+<meta name="description" content="Free lab machines for MAC courses at LaGuardia Community College. Start Kali Linux or Windows Server in a browser tab with a GitHub account.">
+<meta name="color-scheme" content="light">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<a class="skip" href="#machines">Skip to the lab machines</a>
+
+<header class="top">
+  <div class="wrap top-row">
+    <p class="brand"><span class="brand-mark" aria-hidden="true"></span><span id="site-name">Cyber Labs</span></p>
+    <nav aria-label="Shortcuts">
+      <a href="https://github.com/codespaces" target="_blank" rel="noopener">My running machines</a>
+      <a href="#stop">Free hours</a>
+      <a href="#help">Help</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+<section class="hero">
+  <div class="wrap hero-grid">
+    <div class="hero-text">
+      <h1>Kali Linux and Windows Server, in a browser tab.</h1>
+      <p class="lede">Free lab machines for MAC courses at LaGuardia Community College. You need a GitHub account and a web browser. Nothing to install.</p>
+      <div class="course-picker">
+        <p id="course-label">Pick your course to see the machines it uses.</p>
+        <div class="chips" id="course-chips" role="group" aria-labelledby="course-label"></div>
+        <p class="course-note" id="course-note" aria-live="polite"></p>
+      </div>
+    </div>
+    <figure class="screen">
+      <div class="screen-bar" aria-hidden="true">
+        <span class="screen-tab">Kali desktop</span>
+        <span class="screen-url">your-codespace-6080.app.github.dev</span>
+      </div>
+      <img src="assets/kali-desktop.webp" width="800" height="500" alt="The Kali Linux 2026 desktop running in a browser tab, with a terminal window listing the installed tools.">
+      <figcaption>A real screenshot of the Kali desktop machine on this page.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<section class="section" id="machines" aria-labelledby="machines-title">
+  <div class="wrap">
+    <h2 id="machines-title">Lab machines</h2>
+    <p class="section-intro">Each button opens GitHub, where you press Create codespace. If you already made that machine, GitHub offers to resume it.</p>
+    <p class="notice" id="setup-notice" hidden></p>
+    <noscript><p class="notice">This page needs JavaScript to build the launch buttons. You can also open the repository on GitHub and choose Code, then Codespaces.</p></noscript>
+    <ul class="roster" id="roster"></ul>
+  </div>
+</section>
+
+<section class="section" id="start" aria-labelledby="start-title">
+  <div class="wrap">
+    <h2 id="start-title">Start a machine</h2>
+    <ol class="steps">
+      <li>
+        <h3>Sign in to GitHub</h3>
+        <p>Use your own free account at <a href="https://github.com" target="_blank" rel="noopener">github.com</a>. It is the same account you use for your lab repository.</p>
+      </li>
+      <li>
+        <h3>Press a Launch button</h3>
+        <p>GitHub opens a page for the machine you chose. Press Create codespace. Do not change the settings unless your instructor says so.</p>
+      </li>
+      <li>
+        <h3>Wait for the machine</h3>
+        <p>GitHub builds the machine and opens an editor page. A desktop machine then opens its screen in a new tab. If your browser blocks the new tab, allow pop-ups for github.dev.</p>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<section class="section" id="stop" aria-labelledby="stop-title">
+  <div class="wrap two-col">
+    <div>
+      <h2 id="stop-title">Stop it when you finish</h2>
+      <p>A machine uses your free hours while it runs. It stops by itself after 30 minutes without activity, but stopping it yourself saves hours.</p>
+      <ol class="plain-steps">
+        <li>Open <a href="https://github.com/codespaces" target="_blank" rel="noopener">github.com/codespaces</a>.</li>
+        <li>Find the machine in the list and open the menu at the end of its row.</li>
+        <li>Choose Stop codespace. Your files stay.</li>
+        <li>After you submit the lab, choose Delete. A stored machine uses your free storage, and Windows machines use the most.</li>
+      </ol>
+      <p>GitHub deletes a stopped machine after 30 days without use.</p>
+    </div>
+    <div>
+      <h3>Free hours each month</h3>
+      <p>A free personal GitHub account gets 120 core hours and 15 GB of storage each month. Bigger machines spend hours faster.</p>
+      <table class="hours">
+        <thead>
+          <tr><th scope="col">Machine size</th><th scope="col">Used by</th><th scope="col">Free account</th><th scope="col">Verified student</th></tr>
+        </thead>
+        <tbody id="hours-body"></tbody>
+      </table>
+      <p>Hours shown are per month. Verified students get 180 core hours and 20 GB at no cost through <a href="https://education.github.com/pack" target="_blank" rel="noopener">GitHub Education</a>.</p>
+      <p>GitHub emails you when you have used 75, 90 and 100 percent. With no payment method on your account, GitHub does not charge you. Machines stop working until the allowance resets the next month.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="limits" aria-labelledby="limits-title">
+  <div class="wrap two-col">
+    <div>
+      <h2 id="limits-title">What these machines are</h2>
+      <ul class="plain-list">
+        <li>Kali is the official Kali Rolling image with a course tool set. Add any other Kali package with apt, or run <code>lab-install</code> for bigger sets such as Metasploit and Burp Suite.</li>
+        <li>Kali runs in a container on GitHub's servers. Tools that need a Wi-Fi card, a USB device or a kernel module do not work.</li>
+        <li>Windows Server is Microsoft's evaluation edition, which works for 180 days. It installs fresh in each new machine.</li>
+        <li>Each machine is private to you. Do not make its ports public.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Rules for security tools</h3>
+      <ul class="plain-list">
+        <li>Scan and attack only the targets your instructor assigns, or machines you own.</li>
+        <li>Never point these tools at college systems, GitHub, or any site on the internet without written permission.</li>
+        <li>You are responsible for what your account does. GitHub can suspend accounts that break its rules.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="help" aria-labelledby="help-title">
+  <div class="wrap">
+    <h2 id="help-title">If something goes wrong</h2>
+    <div class="faq">
+      <details>
+        <summary>The desktop tab did not open</summary>
+        <p>In the editor page, open the Ports panel at the bottom. Hover over the row for port 6080 (Kali) or 8006 (Windows) and press the globe icon.</p>
+      </details>
+      <details>
+        <summary>The Kali desktop is black or frozen</summary>
+        <p>In the editor page, open a terminal and run <code>start-desktop --restart</code>. Then reload the desktop tab.</p>
+      </details>
+      <details>
+        <summary>Windows shows an error about KVM or runs out of disk space</summary>
+        <p>Delete the machine at github.com/codespaces and launch Windows Server 2019 again with the 4 core size. If it fails twice, send your instructor a screenshot of the message.</p>
+      </details>
+      <details>
+        <summary>GitHub says I have no hours left</summary>
+        <p>Without a payment method, GitHub blocks new and stopped machines until your allowance resets at the start of your next monthly billing cycle. Until then, use the lab computers on campus. To get a larger allowance, apply for GitHub Education as a verified student.</p>
+      </details>
+      <details>
+        <summary>I closed the tab. Is my work gone?</summary>
+        <p>No. Open github.com/codespaces, find the machine and choose Open in browser. Files stay until you delete the machine.</p>
+      </details>
+      <details>
+        <summary>Can I use this on a phone or tablet?</summary>
+        <p>It opens, but a laptop or desktop computer with a keyboard works much better.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer class="foot">
+  <div class="wrap">
+    <p>Maintained by <span id="maintainer">the course instructor</span>.</p>
+    <p>This is a course resource page. It is not an official website of LaGuardia Community College or CUNY.</p>
+    <p>Kali Linux is a trademark of OffSec. Windows Server is a trademark of Microsoft. GitHub and Codespaces are trademarks of GitHub. This page is not affiliated with or endorsed by them. The Windows machines use the open source dockur/windows project.</p>
+  </div>
+</footer>
+
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

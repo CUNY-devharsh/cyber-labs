@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+# Installs optional tool sets from the Kali repositories.
+# Usage: lab-install            list the sets
+#        lab-install <name>...  install one or more sets
+set -euo pipefail
+
+declare -A SETS=(
+  [metasploit]="metasploit-framework"
+  [burp]="burpsuite"
+  [zap]="zaproxy"
+  [ids]="suricata snort"
+  [webtargets]="dvwa juice-shop"
+  [windows]="netexec impacket-scripts evil-winrm responder"
+  [forensics]="sleuthkit autopsy"
+  [seclists]="seclists"
+  [top10]="kali-tools-top10"
+  [headless]="kali-linux-headless"
+  [default]="kali-linux-default"
+)
+declare -A ABOUT=(
+  [metasploit]="Metasploit Framework (about 600 MB download)"
+  [burp]="Burp Suite Community (about 500 MB download, needs the desktop)"
+  [zap]="OWASP ZAP web proxy (needs the desktop)"
+  [ids]="Suricata and Snort intrusion detection"
+  [webtargets]="DVWA and OWASP Juice Shop practice targets"
+  [windows]="Tools for testing Windows and Active Directory"
+  [forensics]="Sleuth Kit and Autopsy"
+  [seclists]="SecLists word lists (large)"
+  [top10]="Kali top 10 tools (about 1.3 GB download)"
+  [headless]="All Kali command line tools (about 1.5 GB download)"
+  [default]="The full default Kali tool set (about 2.2 GB download)"
+)
+ORDER=(metasploit burp zap ids webtargets windows forensics seclists top10 headless default)
+
+if [ "$#" -eq 0 ]; then
+  echo "Optional tool sets:"
+  for s in "${ORDER[@]}"; do printf '  %-11s %s\n' "$s" "${ABOUT[$s]}"; done
+  echo
+  echo "Install with:  lab-install <name> [<name> ...]"
+  echo "Free disk now: $(df -h --output=avail / | tail -1 | tr -d ' ')"
+  exit 0
+fi
+
+PKGS=()
+for s in "$@"; do
+  if [ -z "${SETS[$s]:-}" ]; then
+    echo "Unknown set: $s  (run lab-install with no arguments to see the list)" >&2
+    exit 2
+  fi
+  # shellcheck disable=SC2206
+  PKGS+=(${SETS[$s]})
+done
+
+echo "Installing: ${PKGS[*]}"
+sudo apt-get update
+sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "${PKGS[@]}"
+echo "Done."

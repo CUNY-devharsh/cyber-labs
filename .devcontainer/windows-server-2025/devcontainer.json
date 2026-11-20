@@ -1,0 +1,21 @@
+{
+  "name": "Windows Server 2025",
+  "service": "windows",
+  "containerEnv": {
+    "VERSION": "2025"
+  },
+  "forwardPorts": [
+    8006
+  ],
+  "portsAttributes": {
+    "8006": {
+      "label": "Windows Server 2025",
+      "onAutoForward": "openBrowser"
+    }
+  },
+  "otherPortsAttributes": {
+    "onAutoForward": "ignore"
+  },
+  "dockerComposeFile": "../windows/compose.yml",
+  "initializeCommand": "docker system prune --all --force"
+}

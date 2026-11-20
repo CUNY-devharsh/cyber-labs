@@ -1,0 +1,31 @@
+# Windows Server in a codespace.
+#
+# This follows the Codespaces setup published by the dockur/windows project
+# (MIT license): https://github.com/dockur/windows/tree/master/.devcontainer
+# The container downloads the Windows Server evaluation ISO straight from
+# Microsoft on first start and installs it without any input.
+# Nothing from Microsoft is stored in this repository.
+#
+# The Windows version comes from VERSION, set by each dev container file.
+services:
+  windows:
+    container_name: windows
+    image: ghcr.io/dockur/windows
+    environment:
+      RAM_SIZE: "half"
+      DISK_SIZE: "max"
+      CPU_CORES: "max"
+      DISK_MINIMUM: "1G"
+    devices:
+      - /dev/kvm
+      - /dev/net/tun
+    cap_add:
+      - NET_ADMIN
+    ports:
+      - 8006:8006
+      - 3389:3389/tcp
+      - 3389:3389/udp
+    volumes:
+      - ./storage:/storage
+    restart: on-failure
+    stop_grace_period: 2m
