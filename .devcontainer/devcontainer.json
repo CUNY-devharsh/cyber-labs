@@ -12,7 +12,8 @@
     "NET_RAW"
   ],
   "runArgs": [
-    "--hostname=kali"
+    "--hostname=kali",
+    "--device=/dev/net/tun"
   ],
   "customizations": {
     "codespaces": {

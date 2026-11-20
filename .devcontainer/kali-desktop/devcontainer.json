@@ -13,7 +13,8 @@
   ],
   "runArgs": [
     "--hostname=kali",
-    "--shm-size=1g"
+    "--shm-size=1g",
+    "--device=/dev/net/tun"
   ],
   "forwardPorts": [
     6080

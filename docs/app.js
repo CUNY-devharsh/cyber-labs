@@ -21,17 +21,24 @@
 
   /* Work out which GitHub repository holds the dev containers. */
   function findRepository() {
-    var valid = /^[A-Za-z0-9_.-]+$/;
-    var params = new URLSearchParams(window.location.search);
-    var override = params.get("repo");
-    if (override) {
-      var parts = override.split("/");
-      if (parts.length === 2 && valid.test(parts[0]) && valid.test(parts[1])) {
-        return { owner: parts[0], repo: parts[1] };
+    var hostname = window.location.hostname;
+    /*
+      A ?repo=owner/name setting is honored only when the page is opened from
+      this computer for testing. The published site ignores it, so a link to
+      this page cannot point the Launch buttons at another repository.
+    */
+    if (hostname === "localhost" || hostname === "127.0.0.1") {
+      var valid = /^[A-Za-z0-9_.-]+$/;
+      var override = new URLSearchParams(window.location.search).get("repo");
+      if (override) {
+        var parts = override.split("/");
+        if (parts.length === 2 && valid.test(parts[0]) && valid.test(parts[1])) {
+          return { owner: parts[0], repo: parts[1] };
+        }
       }
     }
     if (cfg.owner && cfg.repo) return { owner: cfg.owner, repo: cfg.repo };
-    var host = window.location.hostname.match(/^([A-Za-z0-9-]+)\.github\.io$/);
+    var host = hostname.match(/^([A-Za-z0-9-]+)\.github\.io$/);
     if (host) {
       var first = window.location.pathname.split("/").filter(Boolean)[0];
       var isPage = !first || /\.html?$/i.test(first);

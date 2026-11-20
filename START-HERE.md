@@ -26,6 +26,23 @@ If the desktop is black or frozen: run `start-desktop --restart` in the terminal
 
 Keep lab files in the `labs` folder. Files stay when you stop the machine. Files are gone when you delete the machine, so download or commit anything you need first.
 
+## Connect to TryHackMe (optional)
+
+Use this only if your instructor asks for it. The Kali machine can join the TryHackMe lab network with your personal OpenVPN file.
+
+1. On TryHackMe, download your OpenVPN configuration file. Its name ends in `.ovpn`.
+2. Drag the file onto the `labs` folder in the Explorer panel of this page.
+3. Move it to your home folder, then connect:
+
+   ```
+   mv labs/*.ovpn ~/
+   sudo openvpn --config ~/*.ovpn
+   ```
+
+4. Leave that terminal open while you work, and open a second terminal for your tools. Press Ctrl+C in the first terminal to disconnect.
+
+The file holds your personal TryHackMe login. Keep it in your home folder. Never commit it and never share it.
+
 ## Stop the machine when you finish
 
 A running machine uses your free hours.

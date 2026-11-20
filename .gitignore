@@ -1,3 +1,6 @@
 # Windows virtual disk created inside a codespace
 .devcontainer/windows/storage/
 .DS_Store
+
+# Personal VPN files (for example a TryHackMe .ovpn file) hold a login. Never commit them.
+*.ovpn
