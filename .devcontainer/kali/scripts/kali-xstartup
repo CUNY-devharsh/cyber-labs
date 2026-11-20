@@ -1,6 +1,12 @@
 #!/bin/sh
 # Session started by the VNC server: a normal Kali XFCE desktop.
 unset SESSION_MANAGER DBUS_SESSION_BUS_ADDRESS
+# Codespaces starts the desktop with SHELL unset, and desktop terminals then
+# fall back to plain sh. Use the account's login shell instead.
+if [ -z "${SHELL:-}" ]; then
+  SHELL="$(getent passwd "$(id -un)" | cut -d: -f7)"
+fi
+export SHELL="${SHELL:-/usr/bin/zsh}"
 export XDG_SESSION_TYPE=x11
 export XDG_CURRENT_DESKTOP=XFCE
 exec dbus-launch --exit-with-session startxfce4

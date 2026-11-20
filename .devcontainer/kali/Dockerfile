@@ -50,10 +50,14 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 
 # The standard Kali account: user kali, password kali, sudo without a password.
+# The .hushlogin files hide Kali's notice about a minimal install. The lab
+# banner takes its place.
 RUN useradd --create-home --shell /usr/bin/zsh --groups sudo,wireshark kali \
  && echo "kali:kali" | chpasswd \
  && echo "kali ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/kali \
- && chmod 0440 /etc/sudoers.d/kali
+ && chmod 0440 /etc/sudoers.d/kali \
+ && touch /home/kali/.hushlogin /root/.hushlogin \
+ && chown kali:kali /home/kali/.hushlogin
 
 COPY scripts/lab-info scripts/lab-install /usr/local/bin/
 COPY scripts/lab-banner.sh /etc/profile.d/lab-banner.sh

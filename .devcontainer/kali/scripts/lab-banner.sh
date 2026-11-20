@@ -1,7 +1,12 @@
-# Printed once per interactive shell. Keep it short.
+# Printed at the top of each new terminal. Keep it short.
 case "$-" in *i*) ;; *) return 0 2>/dev/null || exit 0 ;; esac
-[ -n "${LAB_BANNER_SHOWN:-}" ] && return 0 2>/dev/null
-export LAB_BANNER_SHOWN=1
+# Only in a real terminal. The editor also starts hidden shells to read the
+# environment, and those must stay quiet.
+[ -t 1 ] || return 0 2>/dev/null
+# This marker is not exported on purpose. The editor copies exported variables
+# into every terminal it opens, which would hide the banner everywhere.
+[ -n "${_lab_banner_done:-}" ] && return 0 2>/dev/null
+_lab_banner_done=1
 _lab_ver="$(. /etc/os-release 2>/dev/null; printf '%s' "${VERSION_ID:-rolling}")"
 printf '\n  Kali Linux %s lab environment\n' "$_lab_ver"
 printf '  lab-info      show what this machine is and what is installed\n'
