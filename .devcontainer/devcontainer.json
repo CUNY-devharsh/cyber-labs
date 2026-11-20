@@ -33,7 +33,6 @@
           }
         },
         "workbench.startupEditor": "none",
-        "workbench.secondarySideBar.defaultVisibility": "hidden",
         "files.exclude": {
           "docs": true,
           ".devcontainer": true,

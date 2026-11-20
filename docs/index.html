@@ -72,7 +72,7 @@
       </li>
       <li>
         <h3>Wait for the machine</h3>
-        <p>GitHub builds the machine and opens an editor page. A desktop machine then opens its screen in a new tab. If your browser blocks the new tab, allow pop-ups for github.dev.</p>
+        <p>GitHub builds the machine and opens an editor page. If the page asks whether you trust the authors, press Trust Folder &amp; Continue. A desktop machine then opens its screen in a new tab. If your browser blocks the new tab, allow pop-ups for github.dev.</p>
       </li>
     </ol>
   </div>
@@ -87,7 +87,7 @@
         <li>Open <a href="https://github.com/codespaces" target="_blank" rel="noopener">github.com/codespaces</a>.</li>
         <li>Find the machine in the list and open the menu at the end of its row.</li>
         <li>Choose Stop codespace. Your files stay.</li>
-        <li>After you submit the lab, choose Delete. A stored machine uses your free storage, and Windows machines use the most.</li>
+        <li>After you submit the lab, choose Delete. A stored machine uses your free storage. A Windows machine holds about 15 GB, which uses up the free 15 GB of storage if you keep it for a month.</li>
       </ol>
       <p>GitHub deletes a stopped machine after 30 days without use.</p>
     </div>
@@ -133,12 +133,20 @@
     <h2 id="help-title">If something goes wrong</h2>
     <div class="faq">
       <details>
+        <summary>The page asks whether I trust the authors</summary>
+        <p>Press Trust Folder &amp; Continue. The folder holds the lab files from this site. The terminal does not start until you do.</p>
+      </details>
+      <details>
+        <summary>GitHub says the maximum number of running codespaces is reached</summary>
+        <p>GitHub limits how many machines run at once. In our tests the limit was two. Open github.com/codespaces, stop a machine you are not using, then press Launch again.</p>
+      </details>
+      <details>
         <summary>The desktop tab did not open</summary>
         <p>In the editor page, open the Ports panel at the bottom. Hover over the row for port 6080 (Kali) or 8006 (Windows) and press the globe icon.</p>
       </details>
       <details>
         <summary>The Kali desktop is black or frozen</summary>
-        <p>In the editor page, open a terminal and run <code>start-desktop --restart</code>. Then reload the desktop tab.</p>
+        <p>Right after a start, wait a minute and reload the desktop tab. If that does not help, open a terminal in the editor page and run <code>start-desktop --restart</code>. Then reload the desktop tab.</p>
       </details>
       <details>
         <summary>Windows shows an error about KVM or runs out of disk space</summary>
@@ -154,7 +162,7 @@
       </details>
       <details>
         <summary>I closed the tab. Is my work gone?</summary>
-        <p>No. Open github.com/codespaces, find the machine and choose Open in browser. Files stay until you delete the machine.</p>
+        <p>No. Open github.com/codespaces, find the machine and choose Open in Browser. Files stay until you delete the machine.</p>
       </details>
       <details>
         <summary>Can I use this on a phone or tablet?</summary>

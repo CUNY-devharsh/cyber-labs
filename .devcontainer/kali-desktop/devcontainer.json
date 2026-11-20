@@ -23,6 +23,10 @@
     "6080": {
       "label": "Kali desktop",
       "onAutoForward": "openBrowser"
+    },
+    "5901": {
+      "label": "Desktop internals",
+      "onAutoForward": "ignore"
     }
   },
   "postStartCommand": "start-desktop",
@@ -44,7 +48,6 @@
           }
         },
         "workbench.startupEditor": "none",
-        "workbench.secondarySideBar.defaultVisibility": "hidden",
         "files.exclude": {
           "docs": true,
           ".devcontainer": true,

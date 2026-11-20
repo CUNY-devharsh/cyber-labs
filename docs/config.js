@@ -41,7 +41,7 @@ window.LAB_CONFIG = {
       summary: "The full Kali desktop in a browser tab, with Firefox, Wireshark and Zenmap. Kali Rolling 2026.",
       devcontainerPath: ".devcontainer/kali-desktop/devcontainer.json",
       machine: "basicLinux32gb",
-      firstStart: "First start takes about 7 to 10 minutes. Later starts take about a minute.",
+      firstStart: "First start takes about 8 minutes. Later starts take about a minute.",
       signIn: "User kali, password kali",
       opens: "The desktop opens in a new tab.",
       status: "ready"
@@ -53,7 +53,7 @@ window.LAB_CONFIG = {
       summary: "Kali command line tools only: nmap, hydra, john, hashcat, sqlmap, tshark and more. The fastest machine to start.",
       devcontainerPath: ".devcontainer/devcontainer.json",
       machine: "basicLinux32gb",
-      firstStart: "First start takes about 4 to 6 minutes. Later starts take under a minute.",
+      firstStart: "First start takes about 4 minutes. Later starts take under a minute.",
       signIn: "User kali, no password needed",
       opens: "A Kali terminal opens in the page.",
       status: "ready"
@@ -65,11 +65,11 @@ window.LAB_CONFIG = {
       summary: "Windows Server 2019 with the desktop, in a browser tab. The lightest Windows choice and the version MAC 233 teaches.",
       devcontainerPath: ".devcontainer/windows-server-2019/devcontainer.json",
       machine: "basicLinux32gb",
-      firstStart: "The first start downloads Windows (about 5 GB) and installs it by itself. Keep the tab open and plan for a long wait.",
+      firstStart: "The first start downloads Windows (5.7 GB) and installs it by itself. It took 22 minutes in a test. Later starts take about 3 minutes. Keep the tab open.",
       signIn: "User Docker, password admin",
       tip: "Slow? Change the machine type to 4 cores at github.com/codespaces.",
       opens: "The Windows screen opens in a new tab.",
-      status: "beta"
+      status: "ready"
     },
     {
       id: "win2022",

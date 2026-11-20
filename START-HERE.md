@@ -6,6 +6,8 @@ This machine runs Kali Linux Rolling 2026 on GitHub's servers. It is yours until
 
 The panel at the bottom of this page is a Kali terminal. If you do not see it, open the menu at the top left and choose Terminal, then New Terminal.
 
+If the page asks whether you trust the authors, press Trust Folder & Continue. The terminal does not start until you do.
+
 You are the user `kali`. The password is `kali`. `sudo` does not ask for a password.
 
 | Command | What it does |
@@ -19,6 +21,8 @@ You are the user `kali`. The password is `kali`. `sudo` does not ask for a passw
 If you launched the desktop machine, the Kali desktop opens in a new browser tab.
 
 If the tab did not open: click Ports in the bottom panel, hover over port 6080, and click the globe icon.
+
+If the desktop tab shows an error right after the machine starts: wait a minute and reload it.
 
 If the desktop is black or frozen: run `start-desktop --restart` in the terminal, then reload the desktop tab.
 
@@ -42,6 +46,16 @@ Use this only if your instructor asks for it. The Kali machine can join the TryH
 4. Leave that terminal open while you work, and open a second terminal for your tools. Press Ctrl+C in the first terminal to disconnect.
 
 The file holds your personal TryHackMe login. Keep it in your home folder. Never commit it and never share it.
+
+## On a Windows Server machine
+
+This guide is written for the Kali machines. On a Windows machine:
+
+- The Windows screen is on port 8006. If its tab did not open, click Ports in the bottom panel, hover over port 8006, and click the globe icon.
+- Windows signs in by itself. The account is `Docker` and the password is `admin`.
+- The first start installs Windows. Server 2019 took 22 minutes in a test. Later starts take about 3 minutes.
+- Ignore the message that Git was not found.
+- A Windows machine holds about 15 GB. Delete it after you submit the lab.
 
 ## Stop the machine when you finish
 
