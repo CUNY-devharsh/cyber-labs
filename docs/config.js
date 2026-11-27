@@ -51,6 +51,23 @@ window.LAB_CONFIG = {
       status: "beta"
     },
     {
+      /* Runs inside the browser on QEMU compiled to WebAssembly. No Codespaces
+         involved. The page is docs/kali-browser64/ and the image is built by
+         browser-vm64/. */
+      id: "kali-browser64",
+      family: "kali",
+      name: "Kali in this tab, 64-bit",
+      summary: "A real 64-bit Linux kernel and the Kali reverse engineering tools, running inside your browser. It runs 64-bit programs, which the 32-bit machine cannot. No account, no time limit, nothing to install.",
+      page: "kali-browser64/",
+      buttonText: "Open the 64-bit Kali in this tab",
+      machineLabel: "Runs on your own computer, 64-bit",
+      firstStart: "Starts about 15 seconds after a download of about 100 MB.",
+      signIn: "User kali, password kali",
+      opens: "A Kali terminal opens in the page.",
+      tip: "No internet and no desktop. Much slower than the 32-bit machine: a debugger takes about half a minute to start.",
+      status: "beta"
+    },
+    {
       id: "kali-desktop",
       family: "kali",
       name: "Kali Linux desktop",

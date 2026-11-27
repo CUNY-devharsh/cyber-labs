@@ -1,0 +1,8 @@
+# Build environment for a native QEMU made from the same source as the browser
+# build. The native one boots the machine once and saves its state, and the
+# browser one starts from that state.
+FROM gcc:14
+RUN apt-get update && apt-get install -y libffi-dev libglib2.0-dev libpixman-1-dev libattr1 libattr1-dev ninja-build pipx \
+ && rm -rf /var/lib/apt/lists/*
+RUN PIPX_BIN_DIR=/usr/local/bin pipx install meson==1.5.0
+WORKDIR /build/

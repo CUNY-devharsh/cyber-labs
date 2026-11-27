@@ -1,0 +1,4 @@
+#!/bin/sh
+# First program of the 64-bit browser machine. It hands over to the small
+# BusyBox init, which reads /etc/inittab. There is no systemd here.
+exec /bin/busybox init

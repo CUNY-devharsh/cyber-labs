@@ -1,0 +1,25 @@
+# Keeps the terminal size right in the 64-bit browser machine. The serial line
+# cannot carry the size of the page's terminal, so the page writes "ROWS COLS"
+# to ~/labs/.size and the shell reads that file before it draws each prompt.
+__lab_fit() {
+  local status=$? rows cols
+  if [ -r /home/kali/labs/.size ] && read -r rows cols < /home/kali/labs/.size 2>/dev/null \
+     && [[ $rows =~ ^[0-9]+$ && $cols =~ ^[0-9]+$ ]] && [ "$rows $cols" != "$__lab_size" ]; then
+    __lab_size="$rows $cols"
+    stty rows "$rows" cols "$cols" 2>/dev/null
+  fi
+  return $status
+}
+# Kali's .bashrc prints an empty line before every prompt but the first, with a
+# PROMPT_COMMAND that replaces itself. Do the same here and add the size check.
+case "$PROMPT_COMMAND" in *PROMPT_COMMAND=echo*|echo) __lab_newline=yes ;; *) __lab_newline=no ;; esac
+__lab_prompt() {
+  local status=$?
+  __lab_fit
+  if [ "$__lab_newline" = yes ]; then
+    [ -n "$__lab_seen" ] && echo
+    __lab_seen=1
+  fi
+  return $status
+}
+PROMPT_COMMAND=__lab_prompt

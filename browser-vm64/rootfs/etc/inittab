@@ -1,0 +1,5 @@
+# BusyBox init for the 64-bit browser machine.
+::sysinit:/usr/local/sbin/lab-rcS
+ttyS0::respawn:/sbin/agetty --autologin kali --noissue --noclear -L ttyS0 115200 xterm-256color
+::ctrlaltdel:/bin/busybox reboot -f
+::shutdown:/bin/umount -a -r

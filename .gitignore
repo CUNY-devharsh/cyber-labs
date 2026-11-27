@@ -11,3 +11,14 @@ docs/kali-browser/v86/
 docs/kali-browser/xterm/
 docs/kali-browser/image/
 browser-vm/work/
+
+# The same for the 64-bit machine, built by browser-vm64/build.sh.
+docs/kali-browser64/qemu/
+docs/kali-browser64/xterm/
+docs/kali-browser64/xterm-pty/
+docs/kali-browser64/fflate/
+docs/kali-browser64/image/
+browser-vm64/work/
+
+# Python leaves these behind when a script is checked.
+__pycache__/

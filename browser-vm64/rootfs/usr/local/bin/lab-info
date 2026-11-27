@@ -1,0 +1,11 @@
+#!/bin/sh
+# Shows what this machine is.
+. /etc/os-release
+echo "Machine   Kali in this tab, 64-bit"
+echo "System    ${PRETTY_NAME:-Kali} ($(dpkg --print-architecture))"
+echo "Kernel    $(uname -sr) $(uname -m)"
+echo "Emulator  QEMU compiled to WebAssembly, in your browser"
+echo "Memory    $(free -m | awk '/Mem:/{print $2" MB total, "$7" MB free"}')"
+echo "Network   none"
+echo "Files     ~/labs is shared with the page: Send a file, Get a file, Save my files"
+echo "Tools     gdb strace ltrace objdump readelf strings nm file xxd upx r2 yara readpe gcc python3"

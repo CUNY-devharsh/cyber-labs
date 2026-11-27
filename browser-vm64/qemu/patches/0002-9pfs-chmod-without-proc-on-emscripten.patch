@@ -1,0 +1,22 @@
+diff --git a/hw/9pfs/9p-local.c b/hw/9pfs/9p-local.c
+index 1b1f3b9..ff9857c 100644
+--- a/hw/9pfs/9p-local.c
++++ b/hw/9pfs/9p-local.c
+@@ -357,6 +357,17 @@ static int fchmodat_nofollow(int dirfd, const char *name, mode_t mode)
+         return -1;
+     }
+ 
++#ifdef EMSCRIPTEN
++    /*
++     * The code below changes the mode through /proc/self/fd/N. Emscripten's
++     * /proc/self/fd cannot do that (chmod on it fails with EPERM), so every
++     * new file and directory in the share would fail. Emscripten's file
++     * system lives inside this one program, so nothing can swap a symbolic
++     * link in between the check above and this call.
++     */
++    return fchmodat(dirfd, name, mode, 0);
++#endif
++
+     fd = openat_file(dirfd, name, O_RDONLY | O_PATH_9P_UTIL | O_NOFOLLOW, 0);
+ #if O_PATH_9P_UTIL == 0
+     /* Fallback for systems that don't support O_PATH: we depend on the file

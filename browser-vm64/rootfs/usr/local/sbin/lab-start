@@ -1,0 +1,29 @@
+#!/bin/bash
+# Finishes the start of the machine in a browser tab.
+#
+# The machine state on the web site was saved while this script waited for
+# one line of input. The page sends that line when the tab opens: the size
+# of its terminal, as "ROWS COLS". The script then sets the clock, opens the
+# folder that the page shares with the machine, and shows the welcome text.
+#
+# The page cannot see the moment the machine starts to run, so it repeats the
+# line every two seconds until the welcome text shows. A line can arrive cut
+# short, and extra lines arrive late. Both are harmless here.
+tty=/dev/ttyS0
+IFS=' ' read -rs rows cols < "$tty"
+size=""
+if [[ $rows =~ ^[0-9]+$ && $cols =~ ^[0-9]+$ ]]; then size="rows $rows cols $cols"; fi
+stty -F "$tty" -echo $size 2>/dev/null
+hwclock -s 2>/dev/null
+mount -t 9p -o trans=virtio,version=9p2000.L,msize=65536 labs /home/kali/labs 2>/dev/null
+{
+  printf '\033[H\033[2J\033[3J'
+  printf '\033[1mKali tools on a real 64-bit Linux kernel, running inside this browser tab\033[0m\n'
+  printf '  lab-info   show what this machine is and what is installed\n'
+  printf '  ~/labs     keep your work here. Send a file, Get a file and Save my files use this folder\n'
+  printf '  This machine has no internet and it is slow. A debugger takes a while to start.\n'
+} > "$tty"
+# Drop the extra copies of the page's line, then let the terminal echo again.
+while IFS= read -rs -t 1 extra < "$tty"; do :; done
+stty -F "$tty" echo 2>/dev/null
+exit 0

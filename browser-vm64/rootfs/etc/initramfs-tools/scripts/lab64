@@ -1,0 +1,13 @@
+# Boot script for the 64-bit browser machine. The disk (/dev/vda) is a
+# read-only squashfs image. Changes go to a memory file system on top of it.
+mountroot() {
+	for m in virtio_pci virtio_blk squashfs overlay; do modprobe "$m" 2>/dev/null; done
+	n=0
+	while [ ! -b /dev/vda ] && [ "$n" -lt 100 ]; do sleep 0.1; n=$((n + 1)); done
+	mkdir -p /lower /upper
+	mount -t squashfs -o ro /dev/vda /lower || panic "cannot mount the lab disk"
+	mount -t tmpfs -o size=70%,mode=0755 tmpfs /upper
+	mkdir -p /upper/data /upper/work
+	mount -t overlay -o lowerdir=/lower,upperdir=/upper/data,workdir=/upper/work overlay "${rootmnt}" \
+		|| panic "cannot mount the overlay"
+}
