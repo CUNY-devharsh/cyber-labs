@@ -33,5 +33,7 @@ jobs:
               printf "int main(){return 0;}\n" > /tmp/t.c
               gcc -o /tmp/t /tmp/t.c
               gdb -q -batch -ex run /tmp/t 2>&1 | tee /tmp/gdb.out
-              ! grep -q "Error disabling address space randomization" /tmp/gdb.out
+              if grep -q "Error disabling address space randomization" /tmp/gdb.out; then
+                echo "gdb cannot turn off address randomization"; exit 1
+              fi
               echo ALL_OK'
