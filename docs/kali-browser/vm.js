@@ -107,7 +107,8 @@
       memory_size: info.memory_mb * 1048576,
       vga_memory_size: info.vga_memory_mb * 1048576,
       filesystem: { baseurl: "image/flat/" },
-      initial_state: { url: "image/" + info.state },
+      /* The id in the address keeps a cached state from an older image out. */
+      initial_state: { url: "image/" + info.state + "?v=" + encodeURIComponent(info.id) },
       virtio_console: true,
       screen_dummy: true,
       disable_speaker: true,
