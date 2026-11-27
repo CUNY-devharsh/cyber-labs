@@ -22,7 +22,12 @@ concurrency:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    # Keep this on ubuntu-24.04 (Docker 28). The ubuntu-26.04 image ships
+    # Docker 29.4.2, whose default seccomp profile blocks socketcall, so
+    # 32-bit containers get no network and apt-get fails with "Temporary
+    # failure resolving". Docker 29.4.3 fixes it. See
+    # https://github.com/actions/runner-images/issues/14790
+    runs-on: ubuntu-24.04
     timeout-minutes: 75
     permissions:
       contents: write          # to store the machine image as a release file

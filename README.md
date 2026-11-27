@@ -75,6 +75,8 @@ The built files are too large for git, so GitHub builds them. `.github/workflows
 
 The machine image is built once for each version of `browser-vm/` and kept as a release file in the repository. A change to the site alone reuses it. This matters to students: a machine saved in the browser loads only into the image it was saved from. To rebuild the image with fresh Kali packages, change the number in `browser-vm/VERSION`, and do it between terms.
 
+The build job runs on `ubuntu-24.04` on purpose. The `ubuntu-26.04` image, which `ubuntu-latest` now points to, ships Docker 29.4.2. Its default seccomp profile blocks the `socketcall` system call that 32-bit programs use for networking, so the build fails with `Temporary failure resolving`. Docker 29.4.3 fixes this ([actions/runner-images issue 14790](https://github.com/actions/runner-images/issues/14790)). After the 26.04 image ships that version, `ubuntu-latest` works again.
+
 One-time setup: in the repository open Settings, then Pages, and set Source to GitHub Actions. Until then the page says the machine image is not on the site yet. The first run takes about 20 minutes.
 
 ### What was tested
