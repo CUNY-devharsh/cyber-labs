@@ -61,7 +61,7 @@ window.LAB_CONFIG = {
       page: "kali-browser64/",
       buttonText: "Open the 64-bit Kali in this tab",
       machineLabel: "Runs on your own computer, 64-bit",
-      firstStart: "Starts about 15 seconds after a download of about 100 MB.",
+      firstStart: "Starts in about 20 seconds on a fast connection. It downloads about 75 MB first.",
       signIn: "User kali, password kali",
       opens: "A Kali terminal opens in the page.",
       tip: "No internet and no desktop. Much slower than the 32-bit machine: a debugger takes about half a minute to start.",

@@ -117,7 +117,7 @@ The reverse engineering targets of COSC 332 are 64-bit programs. The 32-bit mach
 | Memory | 512 MB for the machine |
 | Tools | gdb, strace, ltrace, objdump, readelf, strings, file, xxd, radare2, upx, yara, readpe, patchelf, hexedit, gcc, make, python3, tmux. No network tools and no desktop |
 | Console | The serial port `ttyS0`, shown with xterm.js through xterm-pty |
-| Download | About 98 MB at start before the web server compresses it: the saved state (55 MB) and QEMU (41 MB). The disk is 438 MB, cut into 418 pieces that total 161 MB compressed. A piece is fetched the first time the machine reads it |
+| Download | About 73 MB at start: the saved state (57 MB) and QEMU (41 MB, which GitHub Pages sends compressed as 15 MB). The disk is 438 MB, cut into 418 pieces that total 161 MB compressed. A piece is fetched the first time the machine reads it |
 | Network | None |
 | Student work | The folder `~/labs` is shared with the page. Send a file and Get a file use it. Save my files stores the folder in the browser (IndexedDB), up to 256 MB, and the page puts it back at the next start. Everything else starts fresh each time |
 | Browser | QEMU's threads share memory, which browsers allow only on a cross-origin isolated page. GitHub Pages cannot send the two headers for that, so the service worker `sw.js` adds them and the page reloads once on the first visit. A private window that blocks service workers cannot run the machine |
@@ -128,7 +128,7 @@ It is labeled Beta on the site. It is an unofficial build.
 
 `browser-vm64/build.sh` does the whole job. It needs Docker, Node 20 or newer, Python 3, squashfs-tools 4.5 or newer and `git`.
 
-1. `browser-vm64/qemu/build-qemu.sh` builds QEMU twice from one source: once for the browser and once for the build computer. This took 9 minutes on 2 cores once the two build environments existed.
+1. `browser-vm64/qemu/build-qemu.sh` builds QEMU twice from one source: once for the browser and once for the build computer. This took 9 minutes on 2 cores once the two build environments existed. On GitHub's runner the whole step, environments included, took 10 minutes 34 seconds.
 2. `browser-vm64/Dockerfile` builds the Kali system with the kernel and the tools.
 3. The system becomes one squashfs disk without compression. `browser-vm64/tools/make-disk.py` cuts it into pieces of 1 MB and compresses each piece.
 4. `browser-vm64/make-state.py` boots the machine once on the native QEMU, checks the tools, stops the machine and saves its state. Then it loads the state into a fresh QEMU and waits for the prompt, so a bad state fails the build. The page starts QEMU from that state. A cold boot in the browser takes more than seven minutes.
@@ -165,7 +165,10 @@ On November 27, 2026, in headless Chrome against a local copy of the site:
 | COSC 332 answer key | Passed. The 7 targets went in with Send a file, and all 23 steps passed in 195 seconds: `strings`, `ltrace`, `strace`, `objdump`, `gdb`, byte patching, the `ptrace` bypasses, `upx`, `r2`, `readelf`, `yara` |
 | Speed | `gdb --version` took 28 seconds the first time and 24 after that. `python3 -c pass` took 5 seconds, `gcc --version` 1 second. A shell loop runs about 10 times slower than on the 32-bit machine |
 | Saved state | Passed 4 of 4 load tests after the change to save from a stopped machine |
-| On the published site | Not tested at the time of this commit |
+| On the published site, headless Chrome on Linux | Passed twice on November 27, 2026. Running 16 to 17 seconds after the page opened, with the service worker step included. The COSC 332 answer key passed 23 of 23 steps in 187 seconds, with the targets sent through Send a file. During that run the page fetched 233 disk pieces, 95 MB, and waited 8.8 seconds in total for 73 of them. Send a file, Get a file, Save my files and a reload passed, and a reload took 15 seconds. `gdb --version` took 28 seconds, then 23. `python3 -c pass` took 4 seconds |
+| On the published site, Chrome 158 on a Mac | Passed. Running 16 seconds after the page opened. A command ran and printed the 64-bit kernel version |
+| On the published site in Edge, Firefox, Safari and on a Chromebook | Not tested |
+| The GitHub Actions workflow | Passed on the first run, in 13 minutes 5 seconds: 10 minutes 34 seconds to build QEMU and 1 minute 53 seconds to build the machine image |
 
 ## Publish the site (one time)
 
