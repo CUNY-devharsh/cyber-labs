@@ -1,0 +1,13 @@
+[Unit]
+Description=Lab machine setup (host name and hosts file)
+DefaultDependencies=no
+After=local-fs.target
+Before=sysinit.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/lab-setup
+
+[Install]
+WantedBy=sysinit.target

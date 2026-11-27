@@ -55,6 +55,8 @@
     so the link does not ask for one.
   */
   function launchUrl(env) {
+    /* A machine with a page runs inside the browser and needs no GitHub link. */
+    if (env.page) return env.page;
     if (!repository) return null;
     var query = new URLSearchParams();
     query.set("quickstart", "1");
@@ -100,14 +102,14 @@
     item.appendChild(about);
 
     var facts = el("ul", { "class": "machine-facts" });
-    [machineLabel(env.machine), env.firstStart, env.signIn, env.opens, env.tip].forEach(function (fact) {
+    [env.machineLabel || machineLabel(env.machine), env.firstStart, env.signIn, env.opens, env.tip].forEach(function (fact) {
       if (fact) facts.appendChild(el("li", null, fact));
     });
     item.appendChild(facts);
 
     var go = el("div", { "class": "machine-go" });
     var url = launchUrl(env);
-    var button = el("a", { "class": "launch", target: "_blank", rel: "noopener" }, "Launch " + env.name);
+    var button = el("a", { "class": "launch", target: "_blank", rel: "noopener" }, env.buttonText || "Launch " + env.name);
     if (url) button.setAttribute("href", url);
     else button.setAttribute("aria-disabled", "true");
     go.appendChild(button);

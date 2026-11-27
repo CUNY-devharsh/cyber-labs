@@ -4,3 +4,10 @@
 
 # Personal VPN files (for example a TryHackMe .ovpn file) hold a login. Never commit them.
 *.ovpn
+
+# The in-browser machine is built by browser-vm/build.sh (GitHub Actions runs
+# it). The built files are large and are not kept in git.
+docs/kali-browser/v86/
+docs/kali-browser/xterm/
+docs/kali-browser/image/
+browser-vm/work/

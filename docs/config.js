@@ -35,6 +35,22 @@ window.LAB_CONFIG = {
   */
   environments: [
     {
+      /* Runs inside the browser on the v86 emulator. No Codespaces involved.
+         The page is docs/kali-browser/ and the image is built by browser-vm/. */
+      id: "kali-browser",
+      family: "kali",
+      name: "Kali in this tab",
+      summary: "A real Linux kernel and the Kali command line tools, running inside your browser. No account, no time limit, nothing to install.",
+      page: "kali-browser/",
+      buttonText: "Open Kali in this tab",
+      machineLabel: "Runs on your own computer, 32-bit",
+      firstStart: "Starts in a few seconds after a 20 MB download.",
+      signIn: "User kali, password kali",
+      opens: "A Kali terminal opens in the page.",
+      tip: "No internet and no desktop. Slower than a cloud machine.",
+      status: "beta"
+    },
+    {
       id: "kali-desktop",
       family: "kali",
       name: "Kali Linux desktop",
@@ -115,19 +131,19 @@ window.LAB_CONFIG = {
       id: "mac237",
       code: "MAC 237",
       title: "Computer Security",
-      environments: ["kali-desktop", "kali-terminal"]
+      environments: ["kali-browser", "kali-desktop", "kali-terminal"]
     },
     {
       id: "mac246",
       code: "MAC 246",
       title: "Advanced Network Security",
-      environments: ["kali-desktop", "kali-terminal", "win2019"]
+      environments: ["kali-browser", "kali-desktop", "kali-terminal", "win2019"]
     },
     {
       id: "mac247",
       code: "MAC 247",
       title: "Advanced Systems Security",
-      environments: ["kali-desktop", "kali-terminal", "win2019"]
+      environments: ["kali-browser", "kali-desktop", "kali-terminal", "win2019"]
     }
   ]
 };

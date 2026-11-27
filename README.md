@@ -6,6 +6,8 @@ Site: https://cuny-devharsh.github.io/cyber-labs/
 
 Students open the site, pick a machine, and press Launch. The machine starts in GitHub Codespaces and shows up in their browser. They need a free GitHub account and nothing else.
 
+One machine is different. Kali in this tab runs a real Linux kernel inside the student's own browser and needs no account at all.
+
 Student guide for the Kali machines: [START-HERE.md](START-HERE.md). The rest of this file is for the instructor.
 
 ## How it works
@@ -13,9 +15,14 @@ Student guide for the Kali machines: [START-HERE.md](START-HERE.md). The rest of
 | Part | Where it lives | What it does |
 | --- | --- | --- |
 | Launcher site | `docs/` served by GitHub Pages | Lists the machines and builds the launch links |
-| Machines | `.devcontainer/` run by GitHub Codespaces | Kali terminal, Kali desktop, Windows Server 2019, 2022, 2025 |
+| Cloud machines | `.devcontainer/` run by GitHub Codespaces | Kali terminal, Kali desktop, Windows Server 2019, 2022, 2025 |
+| Kali in this tab | `docs/kali-browser/`, built by `browser-vm/` | A Linux kernel and the Kali tools on the v86 emulator, inside the browser |
 
-GitHub Pages only serves files. It cannot run an operating system. Running Kali 2026 or Windows Server inside the browser itself (WebAssembly emulators such as v86) is not possible today: those emulators are 32-bit, Kali stopped shipping 32-bit kernels and images in 2024, Windows Server is 64-bit only, and a Pages site is capped at 1 GB. So the site launches real machines on GitHub's servers, and each student's free Codespaces allowance pays for them.
+GitHub Pages only serves files, so nothing runs on GitHub's side for a visitor. The site gets around that in two ways.
+
+The cloud machines run in GitHub Codespaces. They are the full 64-bit Kali 2026 and Windows Server, and each student's free Codespaces allowance pays for them.
+
+Kali in this tab runs in the student's own browser on [v86](https://github.com/copy/v86), an emulator of a 32-bit PC written in JavaScript and WebAssembly. It boots a real Linux kernel. It is 32-bit, slower than a cloud machine, and has no internet and no desktop. Windows Server 2019 and later cannot run this way: they are 64-bit only, and the Windows image may not be republished.
 
 ## Machines
 
@@ -34,6 +41,60 @@ Both Kali machines expose `/dev/net/tun`, so OpenVPN can join a lab network such
 Windows Server uses the open source [dockur/windows](https://github.com/dockur/windows) container and follows that project's own Codespaces setup. On first start it downloads the evaluation ISO from Microsoft and installs it without input. User `Docker`, password `admin`. No Microsoft files are stored in this repository.
 
 Every machine starts on 2 cores, the smallest size. GitHub ignores a machine size in a launch link that offers to resume a machine. A student who wants 4 cores stops the machine and picks Change machine type at https://github.com/codespaces. To force 4 cores for one machine, add `"hostRequirements": { "cpus": 4 }` to its dev container file.
+
+## Kali in this tab
+
+| Item | Value |
+| --- | --- |
+| Page | `docs/kali-browser/` |
+| Emulator | v86 0.5.476 from npm, a 32-bit PC with an x86 to WebAssembly translator |
+| Kernel | Linux 6.1.0-56-686, the 32-bit long-term kernel from Debian 12. Kali stopped building a 32-bit kernel in October 2024 |
+| User space | Kali rolling 2026.3, 32-bit packages from the official `kalilinux/kali-rolling` image |
+| Memory | 384 MB for the machine |
+| Tools | nmap, hydra, john, sqlmap, nikto, gobuster, ffuf, tshark, tcpdump, smbclient, gdb, gcc, python3 and more, plus OpenSSH server and Apache as practice targets. No hashcat, no VPN clients, no Metasploit, no desktop |
+| Console | The student's terminal is a virtio console (`hvc0`) shown with xterm.js. A hidden root shell on `ttyS0` lets the page set the clock |
+| Download | 20 MB at start. After that each file is fetched the first time the machine reads it. The whole file store is 511 MB in 34,583 files |
+| Network | None. `lab-targets` starts SSH and a web server inside the machine to attack |
+| Student work | Kept in the tab's memory. Save machine stores a snapshot in the browser (IndexedDB). Send a file and Get a file move files in and out of `~/labs` |
+
+It is labeled Beta on the site. Treat it as an unofficial build: Kali tools on a kernel that Kali does not ship.
+
+### How it is built
+
+`browser-vm/build.sh` does the whole job. It needs Docker, Node 20 or newer, Python 3 with the `zstandard` module, `zstd` and `git`.
+
+1. `browser-vm/Dockerfile` builds a 32-bit Kali system with a kernel, systemd, the tools and the lab helpers.
+2. `browser-vm/tools/pack-rootfs.py` turns that system into a store of compressed files named by hash. v86 serves it to the kernel as the root file system over 9p and fetches files over HTTP on demand.
+3. `browser-vm/build-state.mjs` boots the machine once under Node, checks it, and saves its state. The page restores that state, so a student gets a running machine without waiting for a boot.
+
+The built files go to `docs/kali-browser/v86`, `xterm` and `image`. They are about 535 MB and are not kept in git.
+
+### Publish it
+
+The built files are too large for git, so GitHub builds them. `.github/workflows/pages.yml` runs `build.sh` and publishes `docs/` to GitHub Pages. It runs when `docs/` or `browser-vm/` changes.
+
+The machine image is built once for each version of `browser-vm/` and kept as a release file in the repository. A change to the site alone reuses it. This matters to students: a machine saved in the browser loads only into the image it was saved from. To rebuild the image with fresh Kali packages, change the number in `browser-vm/VERSION`, and do it between terms.
+
+One-time setup: in the repository open Settings, then Pages, and set Source to GitHub Actions. Until then the page says the machine image is not on the site yet. The first run takes about 20 minutes.
+
+### What was tested
+
+On November 26, 2026, in headless Chrome against a local copy of the site:
+
+| Item | Result |
+| --- | --- |
+| Kernel boots under v86 | Passed. Linux 6.1.0-56-686 i686, systemd reaches the running state with no failed units, in about 2 minutes under Node |
+| Start from the saved state | Passed. A prompt is ready about 1 second after the files arrive |
+| Terminal | Passed. Signed in as kali on `/dev/hvc0`, window resize follows the page, clock set from the browser |
+| `sudo nmap -sS -sV` against the local targets | Passed in 22 seconds |
+| `hydra` against local SSH | Passed in 13 seconds |
+| `john` on an MD5 hash | Passed in 6 seconds |
+| `sqlmap --version`, `tshark -v`, `python3` | Passed in 35, 6 and 4 seconds |
+| `gcc` builds and runs a C program | Passed in 11 seconds |
+| Save machine and Load saved machine | Passed. Save took 3 to 7 seconds and 38 to 84 MB of browser storage. Load took about 1 second and restored the files |
+| Send a file, Get a file | Passed |
+| On the published site, in Chrome, Edge, Firefox, Safari and on a Chromebook | Not tested. It needs the site to be published first |
+| The GitHub Actions workflow | Not tested. It cannot run outside GitHub |
 
 ## Publish the site (one time)
 
@@ -152,6 +213,9 @@ Codespaces prebuilds can cut the Kali first start to about a minute. Set them up
   windows-server-2022/         Dev container, VERSION 2022
   windows-server-2025/         Dev container, VERSION 2025
 docs/                          The GitHub Pages site
+docs/kali-browser/             Page for Kali in this tab (the image files are built, not stored)
+browser-vm/                    Build files for the machine that runs in the browser
+.github/workflows/pages.yml    Builds that machine and publishes the site
 labs/                          Empty folder for student work inside a Kali machine
 START-HERE.md                  Student quick guide, opens inside Kali machines
 ```
@@ -161,5 +225,7 @@ START-HERE.md                  Student quick guide, opens inside Kali machines
 - Kali Linux images by the Kali team: https://www.kali.org/docs/containers/official-kalilinux-docker-images/
 - Windows in a container by the dockur/windows project (MIT license): https://github.com/dockur/windows
 - Browser desktop by noVNC and TigerVNC.
+- Kali in this tab runs on v86 by Fabian Hemmer and contributors (BSD 2-Clause license): https://github.com/copy/v86
+- Its BIOS files are SeaBIOS and the Bochs VGA BIOS (LGPL). Its terminal is xterm.js (MIT license). Its kernel is from Debian 12 (GPL version 2).
 
 Kali Linux is a trademark of OffSec. Windows Server is a trademark of Microsoft. GitHub and Codespaces are trademarks of GitHub. This project is a course resource. It is not an official website of LaGuardia Community College or CUNY, and it is not affiliated with or endorsed by OffSec, Microsoft or GitHub.

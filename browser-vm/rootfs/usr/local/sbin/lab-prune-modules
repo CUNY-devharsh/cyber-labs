@@ -1,0 +1,35 @@
+#!/bin/sh
+# Removes kernel modules for hardware the emulated PC does not have (sound,
+# graphics cards, Wi-Fi, USB, SCSI and so on) and file systems a lab does not
+# need. This cuts the kernel modules from about 180 MB to about 40 MB.
+set -eu
+for dir in /usr/lib/modules/*/; do
+  ver=$(basename "$dir")
+  cd "$dir/kernel"
+  rm -rf sound \
+    drivers/gpu drivers/media drivers/scsi drivers/usb drivers/iio drivers/staging \
+    drivers/platform drivers/md drivers/infiniband drivers/hwmon drivers/hid \
+    drivers/comedi drivers/target drivers/mtd drivers/ata drivers/bluetooth \
+    drivers/isdn drivers/atm drivers/nfc drivers/mmc drivers/memstick \
+    drivers/firewire drivers/thunderbolt drivers/w1 drivers/pcmcia drivers/parport \
+    drivers/video drivers/leds drivers/power drivers/watchdog drivers/i2c drivers/spi \
+    drivers/gpio drivers/mfd drivers/regulator drivers/ssb drivers/bcma drivers/edac \
+    drivers/hv drivers/xen drivers/vhost drivers/vdpa drivers/nvme drivers/input \
+    drivers/net/wireless drivers/net/usb drivers/net/wan drivers/net/can \
+    drivers/net/ieee802154 drivers/net/wwan drivers/net/hamradio drivers/net/arcnet \
+    drivers/net/fddi drivers/net/dsa drivers/net/hyperv drivers/net/vmxnet3 \
+    net/wireless net/mac80211 net/bluetooth net/sunrpc net/tipc net/smc net/ceph \
+    net/rxrpc net/nfc net/can net/appletalk net/ax25 net/netrom net/rose net/x25 \
+    net/atm net/ieee802154 net/mac802154 net/6lowpan net/batman-adv net/openvswitch \
+    net/rds net/dccp net/l2tp net/vmw_vsock net/qrtr net/phonet net/caif net/lapb \
+    fs/xfs fs/smb fs/cifs fs/ocfs2 fs/nfs fs/nfsd fs/nfs_common fs/lockd fs/btrfs \
+    fs/ceph fs/gfs2 fs/f2fs fs/jfs fs/reiserfs fs/ubifs fs/jffs2 fs/ntfs fs/ntfs3 \
+    fs/afs fs/coda fs/orangefs fs/nilfs2 fs/hfs fs/hfsplus fs/befs fs/minix fs/ufs \
+    fs/erofs fs/dlm
+  # Network cards: keep only the NE2000 family, which v86 emulates.
+  if [ -d drivers/net/ethernet ]; then
+    find drivers/net/ethernet -mindepth 1 -maxdepth 1 ! -name 8390 -exec rm -rf {} +
+  fi
+  depmod -a "$ver"
+  du -sh "$dir"
+done

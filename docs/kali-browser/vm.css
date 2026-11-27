@@ -1,0 +1,57 @@
+/* Kali in this tab. Uses the colors and type of the main site. */
+.vm-page { min-height: 100vh; }
+.brand-link { display: inline-flex; align-items: center; gap: 0.6rem; color: inherit; text-decoration: none; }
+.vm-main { padding-block: 1.6rem 4rem; }
+.vm-head h1 { font-size: clamp(1.9rem, 3.4vw, 2.7rem); }
+.vm-lede { margin: 0.5rem 0 1.1rem; color: var(--ink-soft); max-width: 44rem; }
+
+.vm-status { display: flex; align-items: center; gap: 0.6rem; margin: 0 0 0.6rem; font-weight: 600; }
+.vm-dot { width: 0.7rem; height: 0.7rem; border-radius: 50%; background: #c98a00; flex: none; }
+.vm-dot.running { background: #1d8a4a; }
+.vm-dot.failed { background: #b3261e; }
+.vm-progress { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; margin-bottom: 0.7rem; max-width: 30rem; }
+.vm-progress > div { height: 100%; width: 0; background: var(--action); transition: width 0.2s linear; }
+
+.vm-screen {
+  background: #0d1424;
+  border-radius: 10px;
+  padding: 0.7rem 0.4rem 0.7rem 0.8rem;
+  height: min(68vh, 44rem);
+  min-height: 18rem;
+  box-shadow: 0 1px 0 #00000022, 0 18px 40px -22px #12203f88;
+}
+.vm-screen:fullscreen { height: 100vh; border-radius: 0; }
+#terminal { height: 100%; width: 100%; }
+#terminal .xterm { height: 100%; }
+#terminal .xterm-viewport { background: transparent !important; }
+
+.vm-controls { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 0.9rem; }
+.vm-controls button, dialog button {
+  font: inherit; font-weight: 600; cursor: pointer;
+  color: #fff; background: var(--action); border: 2px solid var(--action);
+  padding: 0.5rem 0.95rem; border-radius: 8px;
+}
+.vm-controls button:hover:not(:disabled), dialog button:hover { background: var(--action-dark); border-color: var(--action-dark); }
+.vm-controls button.quiet, dialog button.quiet { background: transparent; color: var(--ink); border-color: var(--line); }
+.vm-controls button.quiet:hover:not(:disabled), dialog button.quiet:hover { background: #e4e9f3; border-color: var(--ink-soft); }
+.vm-controls button:disabled { opacity: 0.45; cursor: default; }
+.vm-controls #btn-reset { margin-left: auto; }
+.vm-note { min-height: 1.6rem; margin: 0.6rem 0 0; color: var(--ink-soft); }
+.vm-note.bad { color: #8c1d18; font-weight: 600; }
+
+.vm-about { margin-top: 2.6rem; border-top: 1px solid var(--line); padding-top: 1.8rem; }
+.vm-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr)); gap: 1.1rem 2.2rem; margin: 1.1rem 0 1.4rem; }
+.vm-facts dt { font-family: var(--serif); font-weight: 600; font-size: 1.1rem; }
+.vm-facts dd { margin: 0.15rem 0 0; color: var(--ink-soft); }
+.vm-small { font-size: 0.92rem; color: var(--ink-soft); max-width: 50rem; }
+
+dialog { border: 1px solid var(--line); border-radius: 12px; padding: 1.3rem 1.4rem; max-width: min(30rem, 92vw); color: var(--ink); }
+dialog::backdrop { background: #12203f66; }
+dialog p, dialog label { display: block; margin: 0 0 0.9rem; }
+dialog input[type="text"] { font: inherit; font-family: var(--mono); width: 100%; padding: 0.5rem 0.6rem; border: 1px solid var(--ink-soft); border-radius: 6px; margin-bottom: 1rem; }
+.vm-dialog-row { display: flex; justify-content: flex-end; gap: 0.6rem; }
+
+@media (max-width: 40rem) {
+  .vm-screen { height: 60vh; padding-left: 0.5rem; }
+  .vm-controls #btn-reset { margin-left: 0; }
+}

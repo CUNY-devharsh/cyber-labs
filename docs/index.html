@@ -30,7 +30,7 @@
   <div class="wrap hero-grid">
     <div class="hero-text">
       <h1>Kali Linux and Windows Server, in a browser tab.</h1>
-      <p class="lede">Free lab machines for MAC courses at LaGuardia Community College. You need a GitHub account and a web browser. Nothing to install.</p>
+      <p class="lede">Free lab machines for MAC courses at LaGuardia Community College. Kali in this tab needs only a web browser. The cloud machines also need a free GitHub account. Nothing to install.</p>
       <div class="course-picker">
         <p id="course-label">Pick your course to see the machines it uses.</p>
         <div class="chips" id="course-chips" role="group" aria-labelledby="course-label"></div>
@@ -51,7 +51,7 @@
 <section class="section" id="machines" aria-labelledby="machines-title">
   <div class="wrap">
     <h2 id="machines-title">Lab machines</h2>
-    <p class="section-intro">Each button opens GitHub, where you press Create new codespace. If you already made that machine, GitHub offers to resume it.</p>
+    <p class="section-intro">Kali in this tab runs inside your browser and needs no account. Every other button opens GitHub, where you press Create new codespace. If you already made that machine, GitHub offers to resume it.</p>
     <p class="notice" id="setup-notice" hidden></p>
     <noscript><p class="notice">This page needs JavaScript to build the launch buttons. You can also open the repository on GitHub and choose Code, then Codespaces.</p></noscript>
     <ul class="roster" id="roster"></ul>
@@ -132,6 +132,10 @@
   <div class="wrap">
     <h2 id="help-title">If something goes wrong</h2>
     <div class="faq">
+      <details>
+        <summary>What is Kali in this tab?</summary>
+        <p>It is a real Linux kernel and the Kali tools, running inside your browser on an emulated 32-bit PC. It needs no account and uses none of your GitHub hours. It is slower than a cloud machine and has no internet and no desktop. Press Save machine before you close the tab, or your work is lost.</p>
+      </details>
       <details>
         <summary>The page asks whether I trust the authors</summary>
         <p>Press Trust Folder &amp; Continue. The folder holds the lab files from this site. The terminal does not start until you do.</p>

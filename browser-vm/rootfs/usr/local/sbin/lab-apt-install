@@ -1,0 +1,20 @@
+#!/bin/sh
+# Installs the packages that exist for this architecture and lists the rest
+# in /etc/lab-missing-packages. If the group install fails, it installs the
+# packages one at a time so a single broken package cannot stop the build.
+set -u
+apt-get update || exit 1
+have=""; miss=""
+for p in "$@"; do
+  if apt-cache show "$p" >/dev/null 2>&1; then have="$have $p"; else miss="$miss $p"; fi
+done
+if ! apt-get install -y --no-install-recommends $have; then
+  echo "lab-apt-install: group install failed, installing one at a time" >&2
+  ok=""
+  for p in $have; do
+    if apt-get install -y --no-install-recommends "$p"; then ok="$ok $p"; else miss="$miss $p"; fi
+  done
+fi
+echo "$miss" | tr ' ' '\n' | sed '/^$/d' > /etc/lab-missing-packages
+echo "lab-apt-install: not installed:$miss"
+exit 0

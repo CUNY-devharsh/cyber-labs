@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Prints a short description of this lab machine.
+set -u
+. /etc/os-release 2>/dev/null || true
+line() { printf '  %-14s %s\n' "$1" "$2"; }
+echo
+echo "Lab machine (in your browser)"
+line "System"   "${PRETTY_NAME:-Kali GNU/Linux} ${VERSION_ID:-}, 32-bit packages"
+line "Kernel"   "Linux $(uname -r) $(uname -m), running inside this browser tab"
+line "Emulator" "v86, a 32-bit PC written in JavaScript and WebAssembly"
+line "User"     "$(id -un) (password: kali, sudo needs no password)"
+line "Hostname" "$(hostname)"
+line "Memory"   "$(awk '/MemTotal/{printf "%.0f MB", $2/1024}' /proc/meminfo)"
+line "Network"  "none outside this machine; use lab-targets for local targets"
+echo
+echo "Installed tools (checked now)"
+for t in nmap ncat tcpdump tshark hydra john sqlmap nikto gobuster ffuf smbclient openssl gpg gdb python3 gcc sshd apache2; do
+  if command -v "$t" >/dev/null 2>&1 || [ -x "/usr/sbin/$t" ]; then printf '  [x] %s\n' "$t"; else printf '  [ ] %s\n' "$t"; fi
+done | column -c 78
+if [ -s /etc/lab-missing-packages ]; then
+  echo
+  echo "Not available as 32-bit packages: $(tr '\n' ' ' < /etc/lab-missing-packages)"
+fi
+echo

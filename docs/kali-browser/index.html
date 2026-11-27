@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kali in this tab: a Linux kernel running in your browser</title>
+<meta name="description" content="Kali Linux tools on a real Linux kernel that runs inside this browser tab. No account, no install, no time limit.">
+<meta name="color-scheme" content="light">
+<link rel="icon" href="../assets/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="../styles.css">
+<link rel="stylesheet" href="xterm/xterm.css">
+<link rel="stylesheet" href="vm.css">
+</head>
+<body class="vm-page">
+
+<header class="top">
+  <div class="wrap top-row">
+    <p class="brand"><a class="brand-link" href="../"><span class="brand-mark" aria-hidden="true"></span><span>Cyber Labs</span></a></p>
+    <nav aria-label="Shortcuts">
+      <a href="../#machines">All lab machines</a>
+      <a href="#about">About this machine</a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap vm-main">
+  <div class="vm-head">
+    <h1>Kali in this tab</h1>
+    <p class="vm-lede">A Linux kernel and the Kali tools, running inside this page. Nothing is installed and nothing leaves your computer.</p>
+  </div>
+
+  <p class="vm-status" id="status" role="status" aria-live="polite"><span class="vm-dot" id="status-dot"></span><span id="status-text">Getting the machine ready.</span></p>
+  <div class="vm-progress" id="progress" hidden><div id="progress-bar"></div></div>
+
+  <div class="vm-screen" id="screen">
+    <div id="terminal" aria-label="Kali terminal"></div>
+  </div>
+
+  <div class="vm-controls" id="controls">
+    <button type="button" id="btn-save" disabled>Save machine</button>
+    <button type="button" id="btn-load" disabled>Load saved machine</button>
+    <button type="button" id="btn-send" disabled>Send a file</button>
+    <button type="button" id="btn-get" disabled>Get a file</button>
+    <button type="button" id="btn-full" disabled>Full screen</button>
+    <button type="button" id="btn-reset" class="quiet" disabled>Start over</button>
+    <input type="file" id="file-input" hidden>
+  </div>
+  <p class="vm-note" id="note" aria-live="polite"></p>
+
+  <section class="vm-about" id="about">
+    <h2>About this machine</h2>
+    <dl class="vm-facts">
+      <div><dt>What runs</dt><dd>A real Linux kernel on an emulated 32-bit PC. The emulator is <a href="https://github.com/copy/v86" target="_blank" rel="noopener">v86</a>, written in JavaScript and WebAssembly.</dd></div>
+      <div><dt>System</dt><dd id="fact-system">Kali rolling packages, 32-bit, on the Linux 6.1 long-term kernel from Debian.</dd></div>
+      <div><dt>Sign in</dt><dd>You are signed in as <code>kali</code>. The password is <code>kali</code> and <code>sudo</code> does not ask for it.</dd></div>
+      <div><dt>Network</dt><dd>None. The machine cannot reach the internet or your network. Run <code>lab-targets</code> for practice targets inside the machine.</dd></div>
+      <div><dt>Your work</dt><dd>It lives in this tab's memory. Press Save machine before you close the tab. The save stays in this browser on this computer.</dd></div>
+      <div><dt>Speed</dt><dd>Slower than a real computer, because every instruction is emulated. Use a <a href="../#machines">cloud machine</a> for heavy tools, the Kali desktop, or Windows Server.</dd></div>
+      <div><dt>Copy and paste</dt><dd>Select text and press Ctrl+C to copy it. Press Ctrl+V to paste. On a Mac, use Cmd.</dd></div>
+    </dl>
+    <p class="vm-small">This is an unofficial build for this course. Kali Linux is a trademark of OffSec, which does not publish a 32-bit kernel. <span id="fact-built"></span></p>
+  </section>
+</main>
+
+<dialog id="confirm">
+  <form method="dialog">
+    <p id="confirm-text"></p>
+    <div class="vm-dialog-row">
+      <button value="cancel" class="quiet">Cancel</button>
+      <button value="ok" id="confirm-ok">Continue</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="ask">
+  <form method="dialog">
+    <label for="ask-input" id="ask-label"></label>
+    <input type="text" id="ask-input" autocomplete="off" spellcheck="false">
+    <div class="vm-dialog-row">
+      <button value="cancel" class="quiet">Cancel</button>
+      <button value="ok">Get the file</button>
+    </div>
+  </form>
+</dialog>
+
+<script src="xterm/xterm.js"></script>
+<script src="xterm/addon-fit.js"></script>
+<script src="v86/libv86.js"></script>
+<script src="vm.js"></script>
+</body>
+</html>

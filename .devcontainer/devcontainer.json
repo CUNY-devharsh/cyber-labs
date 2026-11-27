@@ -35,6 +35,7 @@
         "workbench.startupEditor": "none",
         "files.exclude": {
           "docs": true,
+          "browser-vm": true,
           ".devcontainer": true,
           ".github": true,
           ".gitignore": true

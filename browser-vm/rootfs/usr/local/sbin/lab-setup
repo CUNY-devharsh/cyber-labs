@@ -1,0 +1,6 @@
+#!/bin/sh
+# Docker leaves /etc/hostname and /etc/hosts empty in an exported image.
+echo kali > /etc/hostname
+hostname kali
+cp /etc/hosts.lab /etc/hosts
+exit 0

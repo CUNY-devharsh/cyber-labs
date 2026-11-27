@@ -1,0 +1,77 @@
+# Builds the machine that runs inside the browser (docs/kali-browser/) and
+# publishes the whole site to GitHub Pages.
+#
+# One-time setup in the repository: Settings, Pages, Build and deployment,
+# Source: GitHub Actions.
+#
+# The machine image is built once for each version of browser-vm/ and kept as
+# a release file, so students' saved machines keep working between site
+# updates. To rebuild it with fresh Kali packages, change the number in
+# browser-vm/VERSION.
+name: Publish the site
+
+on:
+  push:
+    branches: [main]
+    paths: ["docs/**", "browser-vm/**", ".github/workflows/pages.yml"]
+  workflow_dispatch:
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    permissions:
+      contents: write          # to store the machine image as a release file
+    env:
+      GH_TOKEN: ${{ github.token }}
+      IMAGE_FILE: kali-browser-image.tar
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Look for a machine image built from these files
+        id: image
+        run: |
+          hash="${{ hashFiles('browser-vm/**') }}"
+          tag="kali-browser-image-${hash:0:16}"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          if gh release download "$tag" --pattern "$IMAGE_FILE" --dir "$RUNNER_TEMP"; then
+            tar -xf "$RUNNER_TEMP/$IMAGE_FILE" -C docs/kali-browser
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Build the machine image (about 20 minutes)
+        if: steps.image.outputs.found != 'true'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y zstd python3-zstandard
+          bash browser-vm/build.sh
+          tar -cf "$RUNNER_TEMP/$IMAGE_FILE" -C docs/kali-browser v86 xterm image
+          gh release create "${{ steps.image.outputs.tag }}" "$RUNNER_TEMP/$IMAGE_FILE" \
+            --title "Kali in this tab: machine image" \
+            --notes "Built by the Publish the site workflow from browser-vm/. The site uses this image until browser-vm/ changes."
+      - name: Check the image is in place
+        run: test -s docs/kali-browser/image/info.json && cat docs/kali-browser/image/info.json
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: docs
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v5
