@@ -1,24 +1,25 @@
-# Builds the two machines that run inside the browser (docs/kali-browser/ and
-# docs/kali-browser64/) and publishes the whole site to GitHub Pages.
+# Builds the 32-bit machine that runs inside the browser (docs/kali-browser/)
+# and publishes the whole site to GitHub Pages.
 #
 # One-time setup in the repository: Settings, Pages, Build and deployment,
 # Source: GitHub Actions.
 #
-# The 32-bit machine image is built once for each version of browser-vm/ and
-# kept as a release file, so students' saved machines keep working between
-# site updates. To rebuild it with fresh Kali packages, change the number in
+# The machine image is built once for each version of browser-vm/ and kept as
+# a release file, so students' saved machines keep working between site
+# updates. To rebuild it with fresh Kali packages, change the number in
 # browser-vm/VERSION.
 #
-# The 64-bit machine works the same way with browser-vm64/. It has two release
-# files: QEMU itself (built only when browser-vm64/qemu/ changes) and the
-# machine image (built when anything in browser-vm64/ changes). To rebuild it with fresh Kali packages, change
-# the number in browser-vm64/VERSION.
+# The 64-bit machine (docs/kali-browser64/ and browser-vm64/) is not built
+# here. One GitHub Pages site may hold 1 GB, and the two machines together
+# need more. The repository cyber-labs-kali64 checks this repository out,
+# builds the 64-bit machine and publishes it on its own site. After a change
+# to those two folders, press Run workflow there.
 name: Publish the site
 
 on:
   push:
     branches: [main]
-    paths: ["docs/**", "browser-vm/**", "browser-vm64/**", ".github/workflows/pages.yml"]
+    paths: ["docs/**", "browser-vm/**", ".github/workflows/pages.yml"]
   workflow_dispatch:
 
 concurrency:
@@ -33,14 +34,12 @@ jobs:
     # failure resolving". Docker 29.4.3 fixes it. See
     # https://github.com/actions/runner-images/issues/14790
     runs-on: ubuntu-24.04
-    timeout-minutes: 180
+    timeout-minutes: 75
     permissions:
       contents: write          # to store the machine image as a release file
     env:
       GH_TOKEN: ${{ github.token }}
       IMAGE_FILE: kali-browser-image.tar
-      IMAGE64_FILE: kali-browser64-image.tar
-      QEMU64_FILE: kali-browser64-qemu.tar
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -73,61 +72,6 @@ jobs:
           test -s docs/kali-browser/image/info.json && cat docs/kali-browser/image/info.json
           rm -f "$RUNNER_TEMP/$IMAGE_FILE"
 
-      # ---- the 64-bit machine ----
-      - name: Look for a 64-bit machine image built from these files
-        id: image64
-        run: |
-          hash="${{ hashFiles('browser-vm64/**') }}"
-          tag="kali-browser64-image-${hash:0:16}"
-          echo "tag=$tag" >> "$GITHUB_OUTPUT"
-          if gh release download "$tag" --pattern "$IMAGE64_FILE" --dir "$RUNNER_TEMP"; then
-            tar -xf "$RUNNER_TEMP/$IMAGE64_FILE" -C docs/kali-browser64
-            echo "found=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "found=false" >> "$GITHUB_OUTPUT"
-          fi
-      - name: Look for a QEMU build made from these files
-        id: qemu64
-        if: steps.image64.outputs.found != 'true'
-        run: |
-          hash="${{ hashFiles('browser-vm64/qemu/**') }}"
-          tag="kali-browser64-qemu-${hash:0:16}"
-          echo "tag=$tag" >> "$GITHUB_OUTPUT"
-          mkdir -p "$RUNNER_TEMP/qemu-out"
-          if gh release download "$tag" --pattern "$QEMU64_FILE" --dir "$RUNNER_TEMP"; then
-            tar -xf "$RUNNER_TEMP/$QEMU64_FILE" -C "$RUNNER_TEMP/qemu-out"
-            echo "found=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "found=false" >> "$GITHUB_OUTPUT"
-          fi
-      - name: Build QEMU for the browser
-        if: steps.image64.outputs.found != 'true' && steps.qemu64.outputs.found != 'true'
-        run: |
-          LAB_WORK="$RUNNER_TEMP/work64" bash browser-vm64/qemu/build-qemu.sh "$RUNNER_TEMP/qemu-out"
-          tar -cf "$RUNNER_TEMP/$QEMU64_FILE" -C "$RUNNER_TEMP/qemu-out" web bios native commit
-          gh release create "${{ steps.qemu64.outputs.tag }}" "$RUNNER_TEMP/$QEMU64_FILE" \
-            --title "Kali in this tab, 64-bit: QEMU build" \
-            --notes "QEMU for the browser and for the build computer, made by the Publish the site workflow from browser-vm64/qemu/. The source and its license are named in web/SOURCE.txt and web/LICENSE-qemu.txt inside the file."
-          # Make room for the next step.
-          docker image rm lab/qemu-wasm-build lab/qemu-native-build || true
-          docker builder prune --all --force || true
-      - name: Build the 64-bit machine image
-        if: steps.image64.outputs.found != 'true'
-        run: |
-          rm -f "$RUNNER_TEMP/$QEMU64_FILE"
-          sudo apt-get update
-          sudo apt-get install -y squashfs-tools
-          LAB_WORK="$RUNNER_TEMP/work64" LAB_QEMU_OUT="$RUNNER_TEMP/qemu-out" bash browser-vm64/build.sh
-          tar -cf "$RUNNER_TEMP/$IMAGE64_FILE" -C docs/kali-browser64 qemu xterm xterm-pty fflate image
-          gh release create "${{ steps.image64.outputs.tag }}" "$RUNNER_TEMP/$IMAGE64_FILE" \
-            --title "Kali in this tab, 64-bit: machine image" \
-            --notes "Built by the Publish the site workflow from browser-vm64/. The site uses this image until browser-vm64/ changes."
-      - name: Check the 64-bit image is in place
-        run: |
-          test -s docs/kali-browser64/image/info.json && test -s docs/kali-browser64/qemu/qemu-system-x86_64.wasm
-          python3 -c "import json; d = json.load(open('docs/kali-browser64/image/info.json')); d['disk']['empty'] = len(d['disk']['empty']); print(json.dumps(d, indent=1))"
-          rm -f "$RUNNER_TEMP/$IMAGE64_FILE"
-          du -sh docs
       - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v5
         with:

@@ -10,6 +10,10 @@
 # Needs Docker, Node 20 or newer, Python 3, squashfs-tools 4.5 or newer and git.
 # usage: ./build.sh [site dir]      (default: ../docs/kali-browser64)
 #
+# The published copy lives on its own GitHub Pages site (the repository
+# cyber-labs-kali64), because one Pages site may hold 1 GB and the two machines
+# together need more. The workflow in that repository runs this script.
+#
 # QEMU itself is built by qemu/build-qemu.sh. This script runs it only when
 # LAB_QEMU_OUT (default: work/qemu-out) does not hold a build yet.
 set -euo pipefail
@@ -32,6 +36,9 @@ if [ ! -s "$QEMU_OUT/web/qemu-system-x86_64.wasm" ] || [ ! -x "$QEMU_OUT/native/
 fi
 rm -rf "$SITE/qemu" && mkdir -p "$SITE/qemu"
 cp "$QEMU_OUT/web/"* "$SITE/qemu/"
+# The page downloads the program itself and unpacks it, so keep it packed:
+# 41 MB becomes 13 MB on the site.
+gzip -9 -f "$SITE/qemu/qemu-system-x86_64.wasm"
 
 echo "== 2/6 terminal files"
 rm -rf "$SITE/xterm" "$SITE/xterm-pty" "$SITE/fflate" && mkdir -p "$SITE/xterm" "$SITE/xterm-pty" "$SITE/fflate"
@@ -93,7 +100,7 @@ commit = open(f"{qemu_out}/commit").read().strip()
 files = ["bios-256k.bin", "vgabios-stdvga.bin", "kvmvapic.bin", "linuxboot_dma.bin", "vmlinuz", "initrd"]
 size = lambda p: os.path.getsize(f"{site}/{p}")
 digest = hashlib.sha256()
-for path in ["qemu/qemu-system-x86_64.wasm", "image/vm.state.gz"]:
+for path in ["qemu/qemu-system-x86_64.wasm.gz", "image/vm.state.gz"]:
     digest.update(hashlib.sha256(open(f"{site}/{path}", "rb").read()).digest())
 digest.update(disk["sha256"].encode())
 info = {
@@ -112,7 +119,7 @@ info = {
     "state": "vm.state.gz",
     "state_bytes": size("image/vm.state.gz"),
     "state_raw_bytes": facts["state_raw_bytes"],
-    "download_bytes": sum(size("image/" + f) for f in files) + size("image/vm.state.gz") + size("qemu/qemu-system-x86_64.wasm"),
+    "download_bytes": sum(size("image/" + f) for f in files) + size("image/vm.state.gz") + size("qemu/qemu-system-x86_64.wasm.gz"),
     "disk": {k: disk[k] for k in ("size", "chunk", "count", "empty", "packed_bytes")},
 }
 json.dump(info, open(f"{site}/image/info.json", "w"), indent=1)

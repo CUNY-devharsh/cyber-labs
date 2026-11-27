@@ -40,7 +40,7 @@ window.LAB_CONFIG = {
       id: "kali-browser",
       family: "kali",
       name: "Kali in this tab",
-      summary: "A real Linux kernel and the Kali command line tools, running inside your browser. No account, no time limit, nothing to install.",
+      summary: "A real Linux kernel and the Kali command line tools, running inside your browser, with Python, C, C++ and Java. No account, no time limit, nothing to install.",
       page: "kali-browser/",
       buttonText: "Open Kali in this tab",
       machineLabel: "Runs on your own computer, 32-bit",
@@ -52,19 +52,20 @@ window.LAB_CONFIG = {
     },
     {
       /* Runs inside the browser on QEMU compiled to WebAssembly. No Codespaces
-         involved. The page is docs/kali-browser64/ and the image is built by
-         browser-vm64/. */
+         involved. The page is docs/kali-browser64/ and the image is built from
+         browser-vm64/. Both are published on their own site by the repository
+         cyber-labs-kali64, because one Pages site may hold 1 GB. */
       id: "kali-browser64",
       family: "kali",
       name: "Kali in this tab, 64-bit",
-      summary: "A real 64-bit Linux kernel and the Kali reverse engineering tools, running inside your browser. It runs 64-bit programs, which the 32-bit machine cannot. No account, no time limit, nothing to install.",
-      page: "kali-browser64/",
+      summary: "A real 64-bit Linux kernel and the Kali lab tools, running inside your browser. It runs 64-bit programs, which the 32-bit machine cannot. No account, no time limit, nothing to install.",
+      page: "/cyber-labs-kali64/",
       buttonText: "Open the 64-bit Kali in this tab",
       machineLabel: "Runs on your own computer, 64-bit",
       firstStart: "Starts in about 20 seconds on a fast connection. It downloads about 75 MB first.",
       signIn: "User kali, password kali",
       opens: "A Kali terminal opens in the page.",
-      tip: "No internet and no desktop. Much slower than the 32-bit machine: a debugger takes about half a minute to start.",
+      tip: "No internet and no desktop. About ten times slower than the 32-bit machine, so use it when a lab needs 64-bit programs.",
       status: "beta"
     },
     {

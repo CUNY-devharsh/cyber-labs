@@ -1,0 +1,9 @@
+#!/bin/sh
+# The Java compiler from the small kit in /opt/lab-jdk. It starts from a cache
+# of its own classes, already loaded and linked, so it does not repeat that
+# work on every run. The other options pick the quick compiler and a simple
+# memory collector, which suit an emulated processor.
+J=/opt/lab-jdk
+A=""
+[ -f "$J/lib/javac.aot" ] && A="-J-XX:AOTCache=$J/lib/javac.aot"
+exec "$J/bin/javac" -J-XX:+IgnoreUnrecognizedVMOptions -J-XX:TieredStopAtLevel=1 -J-XX:+UseSerialGC $A "$@"

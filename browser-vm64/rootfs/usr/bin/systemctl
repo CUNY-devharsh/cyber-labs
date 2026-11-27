@@ -1,0 +1,133 @@
+#!/bin/bash
+# systemctl for the 64-bit browser machine.
+#
+# This machine starts with a small init, not systemd, so the real systemctl has
+# nothing to talk to. This script does the part of its job that the labs use:
+# it reads a service's unit file and starts, stops or reports on the service
+# itself. It is written in shell because every program start is slow here.
+#
+#   systemctl start|stop|restart|reload|status|is-active|is-enabled|enable|disable UNIT...
+#
+# enable and disable only record the choice (this machine never boots, it
+# starts from a saved state). With --now they also start or stop the service.
+RUN=/run/lab-systemctl
+ETC=/etc/lab-systemctl
+now=""; verb=""; units=()
+for a in "$@"; do
+  case "$a" in
+    --now) now=1 ;;
+    -*) ;;
+    *) if [ -z "$verb" ]; then verb="$a"; else units+=("$a"); fi ;;
+  esac
+done
+
+unit_name() { local u="${1%.service}"; case "$u" in sshd) u=ssh ;; apache|httpd) u=apache2 ;; esac; echo "$u"; }
+unit_file() { local d; for d in /etc/systemd/system /usr/lib/systemd/system /lib/systemd/system; do [ -f "$d/$1.service" ] && { echo "$d/$1.service"; return 0; }; done; return 1; }
+get() { sed -n "s/^$1=//p" "$2"; }
+strip() { local c="$1"; while [ -n "$c" ]; do case "$c" in [-@+!:]*) c="${c#?}" ;; *) break ;; esac; done; echo "${c//%t//run}"; }
+main_pid() { local p; p=$(cat "$RUN/$1.pid" 2>/dev/null); [ -n "$p" ] && [ -d "/proc/$p" ] && echo "$p"; }
+is_active() { [ -n "$(main_pid "$1")" ]; }
+need_root() { [ "$(id -u)" = 0 ] && return 0; echo "systemctl $verb needs root. Run it with sudo." >&2; exit 1; }
+load_env() {
+  local f="$1" line
+  while IFS= read -r line; do line="${line#-}"; [ -f "$line" ] && { set -a; . "$line"; set +a; }; done < <(get EnvironmentFile "$f")
+  while IFS= read -r line; do eval "export $line" 2>/dev/null; done < <(get Environment "$f")
+}
+find_pid() {  # after a start: the service's main process
+  local u="$1" f="$2" cmd="$3" pf p i
+  pf=$(get PIDFile "$f" | tail -1)
+  [ -z "$pf" ] && case "$u" in apache2) pf=/run/apache2/apache2.pid ;; freeradius) pf=/run/freeradius/freeradius.pid ;; esac
+  for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
+    if [ -n "$pf" ] && [ -s "$pf" ]; then p=$(tr -dc 0-9 < "$pf"); [ -d "/proc/$p" ] && { echo "$p"; return 0; }; fi
+    [ -z "$pf" ] && { p=$(pgrep -o -f "^${cmd%% *}" 2>/dev/null); [ -n "$p" ] && { echo "$p"; return 0; }; }
+    sleep 0.5
+  done
+  return 1
+}
+start_unit() {
+  local u="$1" f type cmd pre dir pid
+  f=$(unit_file "$u") || { echo "Failed to start $u.service: Unit $u.service not found." >&2; return 5; }
+  is_active "$u" && return 0
+  mkdir -p "$RUN" && chmod 755 "$RUN"
+  (
+    load_env "$f"
+    for dir in $(get RuntimeDirectory "$f"); do mkdir -p "/run/$dir"; done
+    while IFS= read -r pre; do
+      cmd=$(strip "$pre")
+      if ! sh -c "$cmd" >/dev/null 2>"$RUN/$u.err"; then
+        case "$pre" in -*) ;; *) echo "Job for $u.service failed: $(head -3 "$RUN/$u.err" | tr '\n' ' ')" >&2; exit 1 ;; esac
+      fi
+    done < <(get ExecStartPre "$f")
+    type=$(get Type "$f" | tail -1); cmd=$(strip "$(get ExecStart "$f" | tail -1)")
+    [ -z "$cmd" ] && { echo "Failed to start $u.service: the unit has no ExecStart line." >&2; exit 1; }
+    if [ "$type" = forking ]; then
+      sh -c "$cmd" >"$RUN/$u.log" 2>&1 </dev/null || { echo "Job for $u.service failed: $(tail -3 "$RUN/$u.log" | tr '\n' ' ')" >&2; exit 1; }
+      pid=$(find_pid "$u" "$f" "$cmd") || { echo "Job for $u.service failed: it did not stay running." >&2; exit 1; }
+    else
+      unset NOTIFY_SOCKET
+      setsid sh -c "exec $cmd" >"$RUN/$u.log" 2>&1 </dev/null &
+      pid=$!
+      sleep 1
+      [ -d "/proc/$pid" ] || { echo "Job for $u.service failed: $(tail -3 "$RUN/$u.log" | tr '\n' ' ')" >&2; exit 1; }
+    fi
+    echo "$pid" > "$RUN/$u.pid"; date '+%a %Y-%m-%d %H:%M:%S %Z' > "$RUN/$u.since"
+  )
+}
+stop_unit() {
+  local u="$1" f pid cmd i
+  f=$(unit_file "$u") || { echo "Failed to stop $u.service: Unit $u.service not loaded." >&2; return 5; }
+  pid=$(main_pid "$u") || { rm -f "$RUN/$u.pid"; return 0; }
+  cmd=$(strip "$(get ExecStop "$f" | tail -1)")
+  if [ -n "$cmd" ]; then ( load_env "$f"; export MAINPID="$pid"; sh -c "$cmd" >/dev/null 2>&1 ); else kill -TERM "$pid" 2>/dev/null; fi
+  for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do [ -d "/proc/$pid" ] || break; sleep 0.5; done
+  [ -d "/proc/$pid" ] && kill -KILL "$pid" 2>/dev/null
+  rm -f "$RUN/$u.pid" "$RUN/$u.since"
+}
+reload_unit() {
+  local u="$1" f pid cmd
+  f=$(unit_file "$u") || { echo "Failed to reload $u.service: Unit $u.service not found." >&2; return 5; }
+  pid=$(main_pid "$u") || { echo "$u.service is not active, cannot reload." >&2; return 1; }
+  cmd=$(strip "$(get ExecReload "$f" | tail -1)")
+  if [ -n "$cmd" ]; then ( load_env "$f"; export MAINPID="$pid"; sh -c "$cmd" >/dev/null 2>&1 ); else kill -HUP "$pid"; fi
+}
+status_unit() {
+  local u="$1" f pid en
+  f=$(unit_file "$u") || { echo "Unit $u.service could not be found." >&2; return 4; }
+  en=disabled; [ -e "$ETC/enabled/$u" ] && en=enabled
+  pid=$(main_pid "$u")
+  echo "$([ -n "$pid" ] && echo '●' || echo '○') $u.service - $(get Description "$f" | tail -1)"
+  echo "     Loaded: loaded ($f; $en)"
+  if [ -n "$pid" ]; then
+    echo "     Active: active (running) since $(cat "$RUN/$u.since" 2>/dev/null)"
+    echo "   Main PID: $pid ($(cat "/proc/$pid/comm" 2>/dev/null))"
+    return 0
+  fi
+  echo "     Active: inactive (dead)"; return 3
+}
+
+rc=0
+case "$verb" in
+  start)   need_root; for x in "${units[@]}"; do start_unit "$(unit_name "$x")" || rc=$?; done ;;
+  stop)    need_root; for x in "${units[@]}"; do stop_unit "$(unit_name "$x")" || rc=$?; done ;;
+  restart|try-restart|reload-or-restart)
+           need_root; for x in "${units[@]}"; do u=$(unit_name "$x"); stop_unit "$u"; start_unit "$u" || rc=$?; done ;;
+  reload)  need_root; for x in "${units[@]}"; do reload_unit "$(unit_name "$x")" || rc=$?; done ;;
+  status)  for x in "${units[@]}"; do status_unit "$(unit_name "$x")" || rc=$?; done ;;
+  is-active)
+           for x in "${units[@]}"; do if is_active "$(unit_name "$x")"; then echo active; else echo inactive; rc=3; fi; done ;;
+  is-enabled)
+           for x in "${units[@]}"; do if [ -e "$ETC/enabled/$(unit_name "$x")" ]; then echo enabled; else echo disabled; rc=1; fi; done ;;
+  is-failed)
+           for x in "${units[@]}"; do if is_active "$(unit_name "$x")"; then echo active; rc=1; else echo inactive; rc=1; fi; done ;;
+  enable)  need_root; mkdir -p "$ETC/enabled"
+           for x in "${units[@]}"; do u=$(unit_name "$x"); unit_file "$u" >/dev/null || { echo "Failed to enable unit: Unit $u.service does not exist" >&2; rc=1; continue; }
+             touch "$ETC/enabled/$u"; echo "Enabled $u.service."; [ -n "$now" ] && { start_unit "$u" || rc=$?; }; done ;;
+  disable) need_root
+           for x in "${units[@]}"; do u=$(unit_name "$x"); rm -f "$ETC/enabled/$u"; echo "Disabled $u.service."; [ -n "$now" ] && { stop_unit "$u" || rc=$?; }; done ;;
+  daemon-reload|daemon-reexec|reset-failed) ;;
+  list-units|list-unit-files|"")
+           for f in /usr/lib/systemd/system/*.service; do u=$(basename "$f" .service); case "$u" in *@*) continue ;; esac
+             printf '%-28s %s\n' "$u.service" "$(is_active "$u" && echo active || echo inactive)"; done ;;
+  *) echo "systemctl on this machine knows: start, stop, restart, reload, status, is-active, is-enabled, enable, disable." >&2; rc=1 ;;
+esac
+exit $rc

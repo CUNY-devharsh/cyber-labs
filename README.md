@@ -17,7 +17,7 @@ Student guide for the Kali machines: [START-HERE.md](START-HERE.md). The rest of
 | Launcher site | `docs/` served by GitHub Pages | Lists the machines and builds the launch links |
 | Cloud machines | `.devcontainer/` run by GitHub Codespaces | Kali terminal, Kali desktop, Windows Server 2019, 2022, 2025 |
 | Kali in this tab | `docs/kali-browser/`, built by `browser-vm/` | A Linux kernel and the Kali tools on the v86 emulator, inside the browser |
-| Kali in this tab, 64-bit | `docs/kali-browser64/`, built by `browser-vm64/` | A 64-bit Linux kernel and the reverse engineering tools on QEMU compiled to WebAssembly, inside the browser |
+| Kali in this tab, 64-bit | `docs/kali-browser64/`, built by `browser-vm64/`, published by the repository `cyber-labs-kali64` | A 64-bit Linux kernel and the lab tools on QEMU compiled to WebAssembly, inside the browser |
 
 GitHub Pages only serves files, so nothing runs on GitHub's side for a visitor. The site gets around that in two ways.
 
@@ -52,12 +52,12 @@ Every machine starts on 2 cores, the smallest size. GitHub ignores a machine siz
 | --- | --- |
 | Page | `docs/kali-browser/` |
 | Emulator | v86 0.5.476 from npm, a 32-bit PC with an x86 to WebAssembly translator |
-| Kernel | Linux 6.1.0-56-686, the 32-bit long-term kernel from Debian 12. Kali stopped building a 32-bit kernel in October 2024 |
+| Kernel | Linux 6.1.0-57-686, the 32-bit long-term kernel from Debian 12. Kali stopped building a 32-bit kernel in October 2024 |
 | User space | Kali rolling 2026.3, 32-bit packages from the official `kalilinux/kali-rolling` image |
 | Memory | 384 MB for the machine |
-| Tools | nmap, hydra, john, sqlmap, nikto, gobuster, ffuf, tshark, tcpdump, smbclient, gdb, gcc, python3 and more, plus OpenSSH server and Apache as practice targets. No hashcat, no VPN clients, no Metasploit, no desktop |
+| Tools | nmap, hydra, john, sqlmap, nikto, gobuster, ffuf, tshark, tcpdump, smbclient, aircrack-ng, gdb, strace, ltrace, radare2, upx, yara, readpe, gcc, g++, Java (see the Java kit below), python3 with pandas, numpy, matplotlib and flask, FreeRADIUS, Snort and google-authenticator, plus OpenSSH server and Apache as practice targets. No hashcat, no VPN clients, no Metasploit, no desktop |
 | Console | The student's terminal is a virtio console (`hvc0`) shown with xterm.js. A hidden root shell on `ttyS0` lets the page set the clock |
-| Download | 20 MB at start. After that each file is fetched the first time the machine reads it. The whole file store is 511 MB in 34,583 files |
+| Download | 20 MB at start. After that each file is fetched the first time the machine reads it. The whole file store is 653 MB in 44,668 files |
 | Network | None. `lab-targets` starts SSH and a web server inside the machine to attack |
 | Student work | Kept in the tab's memory. Save machine stores a snapshot in the browser (IndexedDB). Send a file and Get a file move files in and out of `~/labs` |
 
@@ -71,11 +71,11 @@ It is labeled Beta on the site. Treat it as an unofficial build: Kali tools on a
 2. `browser-vm/tools/pack-rootfs.py` turns that system into a store of compressed files named by hash. v86 serves it to the kernel as the root file system over 9p and fetches files over HTTP on demand.
 3. `browser-vm/build-state.mjs` boots the machine once under Node, checks it, and saves its state. The page restores that state, so a student gets a running machine without waiting for a boot.
 
-The built files go to `docs/kali-browser/v86`, `xterm` and `image`. They are about 535 MB and are not kept in git.
+The built files go to `docs/kali-browser/v86`, `xterm` and `image`. They are about 700 MB and are not kept in git.
 
 ### Publish it
 
-The built files are too large for git, so GitHub builds them. `.github/workflows/pages.yml` runs `build.sh` and publishes `docs/` to GitHub Pages. It runs when `docs/`, `browser-vm/` or `browser-vm64/` changes. The 64-bit machine has its own section below.
+The built files are too large for git, so GitHub builds them. `.github/workflows/pages.yml` runs `build.sh` and publishes `docs/` to GitHub Pages. It runs when `docs/` or `browser-vm/` changes. The 64-bit machine is published from a second repository and has its own section below.
 
 The machine image is built once for each version of `browser-vm/` and kept as a release file in the repository. A change to the site alone reuses it. This matters to students: a machine saved in the browser loads only into the image it was saved from. To rebuild the image with fresh Kali packages, change the number in `browser-vm/VERSION`, and do it between terms.
 
@@ -104,25 +104,48 @@ On November 26, 2026, in headless Chrome against a local copy of the site:
 | On the published site in Edge, Firefox, Safari and on a Chromebook | Not tested |
 | The GitHub Actions workflow | Passed. The first run failed on `ubuntu-26.04` (see Publish it). On `ubuntu-24.04` a run that builds the machine took 10 minutes 41 seconds. A run that reuses the stored image took 1 minute 2 seconds |
 
+## The Java kit in both tab machines
+
+COSC 112 and 113 need `javac` and `java`. The full JDK is 300 MB, so both Dockerfiles build a small one with `jlink`: the modules an introductory course uses, 100 MB for 32-bit and 140 MB for 64-bit. It is in `/opt/lab-jdk`, and `/usr/local/bin` has `java`, `javac`, `jshell` and `jar`.
+
+Java starts slowly on an emulated processor. Two things help. `javac` starts from a cache of its own classes, already loaded and linked (the AOT cache of JDK 25). Both commands use only the quick compiler and a simple memory collector. On a normal computer this cut the processor time of one `javac` run from 1.08 to 0.31 seconds for 64-bit.
+
+Kali has no Java for 32-bit x86 with a compiler inside the virtual machine. The 32-bit kit is the Zero build of OpenJDK 25, which interprets every instruction. It works and it is slow.
+
 ## Kali in this tab, 64-bit
 
 The reverse engineering targets of COSC 332 are 64-bit programs. The 32-bit machine cannot run them, so the site has a second machine with a 64-bit kernel. It is much slower. Use it only when a lab needs it.
 
 | Item | Value |
 | --- | --- |
-| Page | `docs/kali-browser64/` |
-| Emulator | QEMU 8.2.0 (`qemu-system-x86_64`) compiled to WebAssembly. The source is [qemu-wasm](https://github.com/ktock/qemu-wasm) at commit `0ef7b4e`, with two patches in `browser-vm64/qemu/patches/` |
+| Page | `docs/kali-browser64/`, published at `/cyber-labs-kali64/` by the repository `cyber-labs-kali64` (see Where it is published) |
+| Emulator | QEMU 8.2.0 (`qemu-system-x86_64`) compiled to WebAssembly. The source is [qemu-wasm](https://github.com/ktock/qemu-wasm) at commit `0ef7b4e`, with three patches in `browser-vm64/qemu/patches/` |
 | Kernel | Linux 7.2.15+kali-amd64, the kernel Kali ships |
 | User space | Kali rolling, 64-bit packages from the official `kalilinux/kali-rolling` image. BusyBox init and bash start the machine, not systemd and zsh |
 | Memory | 512 MB for the machine |
-| Tools | gdb, strace, ltrace, objdump, readelf, strings, file, xxd, radare2, upx, yara, readpe, patchelf, hexedit, gcc, make, python3, tmux. No network tools and no desktop |
+| Tools | The reverse engineering set (gdb, strace, ltrace, objdump, readelf, radare2, upx, yara, readpe, patchelf, hexedit), gcc, g++, Java, python3 with pandas, numpy, matplotlib and flask, and the system and network set: OpenSSH, Apache, nftables, iptables, nmap, tshark, tcpdump, john, hydra, aircrack-ng, sqlmap, nikto, gnupg, git, FreeRADIUS, Snort, google-authenticator. `lab-targets` starts SSH and a web server to practice on. No hashcat, no Metasploit, no desktop |
 | Console | The serial port `ttyS0`, shown with xterm.js through xterm-pty |
-| Download | About 73 MB at start: the saved state (57 MB) and QEMU (41 MB, which GitHub Pages sends compressed as 15 MB). The disk is 438 MB, cut into 418 pieces that total 161 MB compressed. A piece is fetched the first time the machine reads it |
+| Download | About 71 MB at start: the saved state (55 MB) and QEMU (13 MB). The disk is 1.8 GB, cut into 1,697 pieces that total 669 MB compressed. A piece is fetched the first time the machine reads it |
 | Network | None |
 | Student work | The folder `~/labs` is shared with the page. Send a file and Get a file use it. Save my files stores the folder in the browser (IndexedDB), up to 256 MB, and the page puts it back at the next start. Everything else starts fresh each time |
 | Browser | QEMU's threads share memory, which browsers allow only on a cross-origin isolated page. GitHub Pages cannot send the two headers for that, so the service worker `sw.js` adds them and the page reloads once on the first visit. A private window that blocks service workers cannot run the machine |
 
 It is labeled Beta on the site. It is an unofficial build.
+
+This machine has no systemd. `systemctl` here is a shell script written for it (`browser-vm64/rootfs/usr/bin/systemctl`). It reads the same unit files and starts, stops and reports on a service, so the `systemctl` steps of a lab work. The script that the Kali cloud machines use is written in Python and took more than 15 minutes for one call on this emulated processor.
+
+### Where it is published
+
+One GitHub Pages site may hold 1 GB. With every lab tool in both machines, the 32-bit machine needs about 700 MB and the 64-bit machine about 740 MB. So the 64-bit machine has its own site, published by a second repository:
+
+- Repository: https://github.com/CUNY-devharsh/cyber-labs-kali64
+- Site: https://cuny-devharsh.github.io/cyber-labs-kali64/
+
+That repository holds a workflow and a README, and no source. Its workflow checks this repository out, runs `browser-vm64/build.sh`, copies the page from `docs/kali-browser64/` and publishes the result. The page and the build files stay here.
+
+After you change `browser-vm64/` or `docs/kali-browser64/`, open the Actions page of `cyber-labs-kali64` and press Run workflow. The workflow also runs four times a day by itself and publishes only when those files have changed. GitHub switches scheduled runs off after 60 days without a commit in that repository. Run workflow still works then.
+
+The old address, `/cyber-labs/kali-browser64/`, has a copy of the page and no machine. That copy forwards visitors to the new site.
 
 ### How it is built
 
@@ -133,9 +156,9 @@ It is labeled Beta on the site. It is an unofficial build.
 3. The system becomes one squashfs disk without compression. `browser-vm64/tools/make-disk.py` cuts it into pieces of 1 MB and compresses each piece.
 4. `browser-vm64/make-state.py` boots the machine once on the native QEMU, checks the tools, stops the machine and saves its state. Then it loads the state into a fresh QEMU and waits for the prompt, so a bad state fails the build. The page starts QEMU from that state. A cold boot in the browser takes more than seven minutes.
 
-The built files go to `docs/kali-browser64/qemu`, `xterm`, `xterm-pty`, `fflate` and `image`. They are about 260 MB and are not kept in git.
+The built files are `qemu`, `xterm`, `xterm-pty`, `fflate` and `image`. They are about 740 MB and are not kept in git.
 
-The workflow keeps two release files for this machine. QEMU is rebuilt only when `browser-vm64/qemu/` changes. The machine image is rebuilt when anything in `browser-vm64/` changes. To rebuild the image with fresh Kali packages, change the number in `browser-vm64/VERSION`.
+The workflow in `cyber-labs-kali64` keeps two release files there. QEMU is rebuilt only when `browser-vm64/qemu/` changes. The machine image is rebuilt when anything in `browser-vm64/` changes. To rebuild the image with fresh Kali packages, change the number in `browser-vm64/VERSION`.
 
 ### Parts written for this machine
 
@@ -143,10 +166,12 @@ The workflow keeps two release files for this machine. QEMU is rebuilt only when
 | --- | --- |
 | `docs/kali-browser64/lab-disk.js` and `browser-vm64/tools/make-disk.py` | A disk that downloads itself. QEMU sees one file. A read of a part that is not there yet fetches that piece, and the next two pieces follow in the background. A failed request is tried again up to four times |
 | `docs/kali-browser64/sw.js` | The service worker that makes the page cross-origin isolated on GitHub Pages |
+| `browser-vm64/rootfs/usr/bin/systemctl` | A `systemctl` in shell for a machine without systemd: start, stop, restart, reload, status, is-active, is-enabled, enable, disable |
 | `browser-vm64/make-state.py` | Saves the state and tests it. It saves from a stopped machine, because one state saved from a running machine crashed in the kernel's timer code when it was loaded |
 | `browser-vm64/rootfs/usr/local/sbin/lab-start` | Finishes the start in the tab. The saved machine waits for one line from the page, then sets the clock from the browser, opens `~/labs` and shows the welcome text |
 | `0001-9pfs-translate-emscripten-error-codes.patch` | QEMU sent the browser toolchain's error numbers to the guest. A missing file reached Linux as "Channel number out of range", so nothing could be created in `~/labs`. The patch translates all 131 codes |
 | `0002-9pfs-chmod-without-proc-on-emscripten.patch` | QEMU sets the mode of a new file through `/proc/self/fd`, which does not work in the browser. The patch uses `fchmodat` there |
+| `0003-wasm-backend-widen-operands-of-32-bit-double-multiply.patch` | A fault in the part of qemu-wasm that compiles guest code to WebAssembly. A signed 32-bit multiply of a negative number reported an overflow that did not happen. The `ssh` client checks every multiply for overflow, so it stopped with Aborted on each connection. `browser-vm64/tools/mul-check.c` is the test that showed it: 2 million wrong answers in 6 million multiplies before the patch |
 
 The window size cannot travel over a serial line. The page writes it to `~/labs/.size`, and the shell reads that file before each prompt. A new size takes effect at the next prompt.
 
@@ -326,9 +351,9 @@ The COSC 332 targets are 64-bit programs. They run on the Kali cloud machines an
 docs/                          The GitHub Pages site
 docs/kali-browser/             Page for Kali in this tab (the image files are built, not stored)
 browser-vm/                    Build files for the machine that runs in the browser
-docs/kali-browser64/           Page for Kali in this tab, 64-bit (the image files are built, not stored)
+docs/kali-browser64/           Page for Kali in this tab, 64-bit. Published by the repository cyber-labs-kali64
 browser-vm64/                  Build files for the 64-bit machine, with the QEMU build in qemu/
-.github/workflows/pages.yml    Builds both machines and publishes the site
+.github/workflows/pages.yml    Builds the 32-bit machine and publishes this site
 .github/workflows/kali-image.yml  Builds the Kali cloud image and runs lab steps in it on every change
 labs/                          Empty folder for student work inside a Kali machine
 START-HERE.md                  Student quick guide, opens inside Kali machines
@@ -343,7 +368,7 @@ START-HERE.md                  Student quick guide, opens inside Kali machines
 - Practice target: Metasploitable 2 by Rapid7, from the `tleemcjr/metasploitable2` image on Docker Hub. DVWA is the Damn Vulnerable Web Application project.
 - Kali in this tab runs on v86 by Fabian Hemmer and contributors (BSD 2-Clause license): https://github.com/copy/v86
 - Its BIOS files are SeaBIOS and the Bochs VGA BIOS (LGPL). Its terminal is xterm.js (MIT license). Its kernel is from Debian 12 (GPL version 2).
-- Kali in this tab, 64-bit runs on QEMU (GPL version 2), in the WebAssembly version by Kohei Tokunaga: https://github.com/ktock/qemu-wasm. The build script and our two patches are in `browser-vm64/qemu/`. The site serves the license and a note naming the source beside the program, in `kali-browser64/qemu/`.
+- Kali in this tab, 64-bit runs on QEMU (GPL version 2), in the WebAssembly version by Kohei Tokunaga: https://github.com/ktock/qemu-wasm. The build script and our three patches are in `browser-vm64/qemu/`. The site serves the license and a note naming the source beside the program, in `kali-browser64/qemu/`.
 - Its terminal is xterm.js with xterm-pty, and fflate unpacks the disk pieces (all MIT license). Its kernel is the Kali kernel (GPL version 2).
 
 Kali Linux is a trademark of OffSec. Windows Server is a trademark of Microsoft. GitHub and Codespaces are trademarks of GitHub. This project is a course resource. It is not an official website of LaGuardia Community College or CUNY, and it is not affiliated with or endorsed by OffSec, Microsoft or GitHub.

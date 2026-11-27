@@ -12,6 +12,22 @@ RUN apt-get update \
  && apt-get download "$(apt-cache depends linux-image-686 | awk '/Depends: linux-image-[0-9]/{print $2; exit}')" \
  && ls -l /debs
 
+# A small Java kit for the programming courses (COSC 112 and 113). The full JDK
+# is 300 MB. jlink builds a runtime with only the modules an introductory
+# course uses. The class data archive and the compiler's start-up cache make
+# java and javac start faster, which matters on an emulated processor.
+FROM --platform=linux/386 kalilinux/kali-rolling:latest AS jdk
+RUN apt-get update \
+ && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends default-jdk-headless \
+ && jlink --add-modules java.base,java.compiler,jdk.compiler,java.logging,java.xml,java.sql,java.net.http,java.management,jdk.jshell,jdk.jartool,jdk.zipfs \
+      --no-header-files --no-man-pages --generate-cds-archive --output /opt/lab-jdk \
+ && cd /tmp && printf 'public class Warm { public static void main(String[] a) { System.out.println("java works"); } }\n' > Warm.java \
+ && (/opt/lab-jdk/bin/javac -J-XX:+IgnoreUnrecognizedVMOptions -J-XX:TieredStopAtLevel=1 -J-XX:+UseSerialGC \
+        -J-XX:AOTCacheOutput=/opt/lab-jdk/lib/javac.aot Warm.java \
+     || /opt/lab-jdk/bin/javac Warm.java) \
+ && ls -l /opt/lab-jdk/lib/javac.aot \
+ && /opt/lab-jdk/bin/java -cp /tmp Warm && /opt/lab-jdk/bin/java -version && du -sh /opt/lab-jdk
+
 FROM --platform=linux/386 kalilinux/kali-rolling:latest AS vm
 
 ARG DEBIAN_FRONTEND=noninteractive
@@ -79,14 +95,25 @@ ARG LAB_TOOLS="\
       openssl gnupg openssh-client openssh-server apache2 \
       iptables nftables lynis chkrootkit \
       python3 python3-scapy \
-      gcc libc6-dev gdb make binutils binwalk libimage-exiftool-perl steghide \
-      sqlite3"
+      gcc g++ libc6-dev gdb make binutils binwalk libimage-exiftool-perl steghide \
+      sqlite3 at sshpass aircrack-ng \
+      python3-pandas python3-numpy python3-matplotlib python3-flask \
+      strace ltrace upx-ucl radare2 yara readpe \
+      freeradius snort libpam-google-authenticator"
 RUN echo "wireshark-common wireshark-common/install-setuid boolean true" | debconf-set-selections \
  && chmod +x /usr/local/sbin/lab-apt-install \
  && lab-apt-install ${LAB_TOOLS} \
- && rm -f /usr/bin/*-lto-dump-* \
+ && rm -f /usr/bin/*-lto-dump-* /usr/libexec/gcc/*/*/lto1 /usr/libexec/gcc/*/*/lto-wrapper \
+ && rm -rf /usr/lib/python3/dist-packages/pandas/tests /usr/lib/python3/dist-packages/numpy/tests \
+      /usr/lib/python3/dist-packages/numpy/*/tests /usr/lib/python3/dist-packages/matplotlib/tests \
+      /usr/lib/python3/dist-packages/mpl_toolkits/*/tests \
+      /usr/lib/python3/dist-packages/matplotlib/mpl-data/sample_data \
+ && (MPLBACKEND=Agg python3 -c "import pandas, numpy, matplotlib.pyplot, flask; print('python libraries import:', pandas.__version__, numpy.__version__)" || echo "python libraries: not all available for 32-bit") \
  && apt-get clean \
  && rm -rf /var/lib/apt/lists/* /var/cache/apt/*.bin /var/log/apt /var/log/dpkg.log
+
+# The small Java kit built above. /usr/local/bin has java, javac, jshell and jar.
+COPY --from=jdk /opt/lab-jdk /opt/lab-jdk
 
 # The standard Kali account: user kali, password kali, sudo without a password.
 RUN useradd --create-home --shell /usr/bin/zsh --groups sudo kali \

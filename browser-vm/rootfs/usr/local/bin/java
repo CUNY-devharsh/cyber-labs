@@ -1,0 +1,5 @@
+#!/bin/sh
+# Java from the small kit in /opt/lab-jdk. The options make it start faster on
+# an emulated processor: only the quick compiler, a simple memory collector,
+# and the class data archive.
+exec /opt/lab-jdk/bin/java -XX:+IgnoreUnrecognizedVMOptions -XX:TieredStopAtLevel=1 -XX:+UseSerialGC -Xshare:auto "$@"

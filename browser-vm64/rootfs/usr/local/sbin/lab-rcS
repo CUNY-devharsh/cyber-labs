@@ -8,7 +8,7 @@ mount -t devpts -o gid=5,mode=620 devpts /dev/pts
 mount -t tmpfs -o mode=1777 tmpfs /dev/shm
 mount -t tmpfs -o mode=1777 tmpfs /tmp
 mount -t tmpfs -o mode=0755 tmpfs /run
-mkdir -p /run/lock /run/sudo
+mkdir -p /run/lock /run/sudo /run/sshd /run/apache2 /var/lock/apache2
 hostname kali
 cat /etc/hosts.lab > /etc/hosts
 ip link set lo up 2>/dev/null

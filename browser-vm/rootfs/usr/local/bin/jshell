@@ -1,0 +1,3 @@
+#!/bin/sh
+# The Java shell from the small kit in /opt/lab-jdk.
+exec /opt/lab-jdk/bin/jshell -J-XX:+IgnoreUnrecognizedVMOptions -J-XX:TieredStopAtLevel=1 -J-XX:+UseSerialGC "$@"

@@ -215,7 +215,7 @@
   function start(isolated) {
     if (!isolated) {
       fail("This browser did not allow the 64-bit machine to start.");
-      note.innerHTML = 'Open the page in a normal (not private) window of a current Chrome, Edge, Firefox or Safari, or use the <a href="../kali-browser/">32-bit machine</a>.';
+      note.innerHTML = 'Open the page in a normal (not private) window of a current Chrome, Edge, Firefox or Safari, or use the <a href="/cyber-labs/kali-browser/">32-bit machine</a>.';
       return;
     }
     var files = {}, saved = null, wasm = null, state = null;
@@ -226,7 +226,7 @@
       chain = chain.then(function () { return downloadTwice("image/" + name); }).then(function (data) { files[name] = data; });
     });
     chain
-      .then(function () { return downloadTwice("qemu/qemu-system-x86_64.wasm"); }).then(function (data) { wasm = data; })
+      .then(function () { return downloadTwice("qemu/qemu-system-x86_64.wasm.gz"); }).then(gunzip).then(function (data) { wasm = data; })
       .then(function () { return downloadTwice("image/" + info.state); })
       .then(function (packed) { setStatus("", "Unpacking the machine."); progressBar.style.width = "100%"; return gunzip(packed); })
       .then(function (data) { state = data; return loadSaved(); })
@@ -356,12 +356,15 @@
   window.addEventListener("beforeunload", function (e) { if (running && dirty) { e.preventDefault(); e.returnValue = ""; } });
 
   /* ---------- go ---------- */
+  /* The machine's files live on their own site. A copy of this page on the main
+     site has no machine image beside it and sends the visitor there. */
+  var HOME = "/cyber-labs-kali64/";
   if (!window.WebAssembly || !window.DecompressionStream) { fail("This browser cannot run the machine. Use a current Chrome, Edge, Firefox or Safari."); return; }
-  makeTerminal();
   fetch("image/info.json", { cache: "no-cache" })
     .then(function (r) { if (!r.ok) throw new Error("missing"); return r.json(); })
     .then(function (data) {
       info = data;
+      makeTerminal();
       $("fact-system").textContent = info.system + ", on the Kali kernel " + info.kernel + ". The machine has " + info.memory_mb + " MB of memory.";
       $("fact-built").textContent = "Built on " + info.built + ".";
       var source = $("fact-source");
@@ -375,10 +378,13 @@
       source.appendChild(document.createTextNode(" with "));
       source.appendChild(link(info.qemu_changes, "these changes"));
       source.appendChild(document.createTextNode("."));
-      return isolate();
+      return isolate().then(start);
     })
-    .then(start)
-    .catch(function () { fail("The machine image is not on this site yet."); });
+    .catch(function (e) {
+      if (info) { fail("The machine could not start. Reload the page."); say(e && e.message ? e.message : String(e), true); return; }
+      if (location.pathname.indexOf(HOME) !== 0 && /\.github\.io$/.test(location.hostname)) { location.replace(HOME); return; }
+      fail("The machine image is not on this site yet.");
+    });
 
   window.labMachine = { pty: function () { return pty; }, terminal: function () { return term; }, isRunning: function () { return running; }, instance: function () { return machine; }, disk: function () { return disk; }, screenText: screenText };
 })();

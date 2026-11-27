@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Starts or stops practice targets that run on this machine.
+set -u
+case "${1:-start}" in
+  start)
+    sudo systemctl start ssh apache2
+    echo
+    echo "Practice targets are running on this machine (127.0.0.1):"
+    echo "  SSH  port 22   user kali, password kali"
+    echo "  Web  port 80   Apache with the default page"
+    echo
+    echo "Try:"
+    echo "  sudo nmap -sS -sV -p 22,80 127.0.0.1"
+    echo "  hydra -l kali -P /usr/share/wordlists/nmap.lst ssh://127.0.0.1 -t 4"
+    echo "This machine is slow. A scan of two ports takes a few minutes."
+    echo
+    ;;
+  stop)   sudo systemctl stop ssh apache2; echo "Practice targets stopped." ;;
+  status) systemctl is-active ssh apache2 ;;
+  *)      echo "usage: lab-targets [start|stop|status]"; exit 1 ;;
+esac

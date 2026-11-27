@@ -1,0 +1,39 @@
+diff --git a/tcg/wasm32/tcg-target.c.inc b/tcg/wasm32/tcg-target.c.inc
+index 3c85588..9fdb24e 100644
+--- a/tcg/wasm32/tcg-target.c.inc
++++ b/tcg/wasm32/tcg-target.c.inc
+@@ -1458,10 +1458,22 @@ static void tcg_wasm_out_sub2(TCGContext *s, TCGReg retl, TCGReg reth,
+     tcg_wasm_out_op_global_set_r(s, reth);
+ }
+ 
++/*
++ * A register is 64 bits wide here, and a 32-bit value sits in its low half.
++ * The 64-bit product of two such values is only right when both are first
++ * widened the way the multiply asks for: with zeros for an unsigned multiply,
++ * with the sign bit for a signed one. Without that, the high half of a signed
++ * product was wrong whenever an operand was negative, so the guest saw a
++ * false overflow flag after a 32-bit imul.
++ */
+ static void tcg_wasm_out_mulu2_i32(TCGContext *s, TCGReg retl, TCGReg reth, TCGReg arg1, TCGReg arg2)
+ {
+     tcg_wasm_out_op_global_get_r(s, arg1);
++    tcg_wasm_out_op_i64_const(s, 0xffffffff);
++    tcg_wasm_out_op_i64_and(s);
+     tcg_wasm_out_op_global_get_r(s, arg2);
++    tcg_wasm_out_op_i64_const(s, 0xffffffff);
++    tcg_wasm_out_op_i64_and(s);
+     tcg_wasm_out_op_i64_mul(s);
+     tcg_wasm_out_op_set_r_as_i64(s, retl, reth);
+ }
+@@ -1469,7 +1481,11 @@ static void tcg_wasm_out_mulu2_i32(TCGContext *s, TCGReg retl, TCGReg reth, TCGR
+ static void tcg_wasm_out_muls2_i32(TCGContext *s, TCGReg retl, TCGReg reth, TCGReg arg1, TCGReg arg2)
+ {
+     tcg_wasm_out_op_global_get_r(s, arg1);
++    tcg_wasm_out_op_i32_wrap_i64(s);
++    tcg_wasm_out_op_i64_extend_i32_s(s);
+     tcg_wasm_out_op_global_get_r(s, arg2);
++    tcg_wasm_out_op_i32_wrap_i64(s);
++    tcg_wasm_out_op_i64_extend_i32_s(s);
+     tcg_wasm_out_op_i64_mul(s);
+     tcg_wasm_out_op_set_r_as_i64(s, retl, reth);
+ }

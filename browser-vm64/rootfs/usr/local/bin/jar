@@ -1,0 +1,3 @@
+#!/bin/sh
+# The Java archive tool from the small kit in /opt/lab-jdk.
+exec /opt/lab-jdk/bin/jar "$@"
