@@ -9,7 +9,11 @@
   "init": true,
   "capAdd": [
     "NET_ADMIN",
-    "NET_RAW"
+    "NET_RAW",
+    "SYS_PTRACE"
+  ],
+  "securityOpt": [
+    "seccomp=unconfined"
   ],
   "runArgs": [
     "--hostname=kali",

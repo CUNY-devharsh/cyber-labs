@@ -30,13 +30,14 @@ Kali in this tab runs in the student's own browser on [v86](https://github.com/c
 | --- | --- | --- | --- |
 | Kali Linux terminal | `.devcontainer/devcontainer.json` | 2 cores | Terminal in the editor page |
 | Kali Linux desktop | `.devcontainer/kali-desktop/devcontainer.json` | 2 cores | XFCE desktop through noVNC on port 6080 |
+| Kali Linux desktop with a target | `.devcontainer/kali-targets/devcontainer.json` | 2 cores | The same desktop, plus Metasploitable 2 at 192.168.56.101 |
 | Windows Server 2019 | `.devcontainer/windows-server-2019/devcontainer.json` | 2 cores | Web viewer on port 8006 |
 | Windows Server 2022 | `.devcontainer/windows-server-2022/devcontainer.json` | 2 cores | Web viewer on port 8006 |
 | Windows Server 2025 | `.devcontainer/windows-server-2025/devcontainer.json` | 2 cores | Web viewer on port 8006 |
 
 Kali is built from the official `kalilinux/kali-rolling` image (version 2026.3 on the build date, November 20, 2026). User `kali`, password `kali`, sudo without a password, time zone America/New_York.
 
-Both Kali machines expose `/dev/net/tun`, so OpenVPN can join a lab network such as TryHackMe. The student steps are in START-HERE.md.
+The Kali machines expose `/dev/net/tun`, so OpenVPN can join a lab network such as TryHackMe. The student steps are in START-HERE.md.
 
 Windows Server uses the open source [dockur/windows](https://github.com/dockur/windows) container and follows that project's own Codespaces setup. On first start it downloads the evaluation ISO from Microsoft and installs it without input. User `Docker`, password `admin`. No Microsoft files are stored in this repository.
 
@@ -77,7 +78,7 @@ The machine image is built once for each version of `browser-vm/` and kept as a 
 
 The build job runs on `ubuntu-24.04` on purpose. The `ubuntu-26.04` image, which `ubuntu-latest` now points to, ships Docker 29.4.2. Its default seccomp profile blocks the `socketcall` system call that 32-bit programs use for networking, so the build fails with `Temporary failure resolving`. Docker 29.4.3 fixes this ([actions/runner-images issue 14790](https://github.com/actions/runner-images/issues/14790)). After the 26.04 image ships that version, `ubuntu-latest` works again.
 
-One-time setup: in the repository open Settings, then Pages, and set Source to GitHub Actions. Until then the page says the machine image is not on the site yet. The first run takes about 20 minutes.
+One-time setup: in the repository open Settings, then Pages, and set Source to GitHub Actions. Until then the page says the machine image is not on the site yet. A run that builds the machine takes about 11 minutes.
 
 ### What was tested
 
@@ -95,8 +96,10 @@ On November 26, 2026, in headless Chrome against a local copy of the site:
 | `gcc` builds and runs a C program | Passed in 11 seconds |
 | Save machine and Load saved machine | Passed. Save took 3 to 7 seconds and 38 to 84 MB of browser storage. Load took about 1 second and restored the files |
 | Send a file, Get a file | Passed |
-| On the published site, in Chrome, Edge, Firefox, Safari and on a Chromebook | Not tested. It needs the site to be published first |
-| The GitHub Actions workflow | Not tested. It cannot run outside GitHub |
+| On the published site, headless Chrome on Linux | Passed twice on November 26, 2026. Running 2.3 seconds after the page opened. First use of each tool includes its download: `nmap -sS -sV` 28 to 30 seconds, `hydra` 33 to 38, `john` 9, `gcc` 13 to 14, `sqlmap --version` 49 to 53. Save 8 seconds and 84 MB. Load 1.6 seconds. Send a file and Get a file passed. In one run, 1 of 974 file requests got a 503 from GitHub Pages and v86 fetched it again by itself |
+| On the published site, the browser in the Claude desktop app on a Mac (Chrome 156 engine) | Passed. The machine started, `lab-targets` took 20 seconds and `nmap -sS -sV` 26 seconds. 250 requests, none failed |
+| On the published site in Edge, Firefox, Safari and on a Chromebook | Not tested |
+| The GitHub Actions workflow | Passed. The first run failed on `ubuntu-26.04` (see Publish it). On `ubuntu-24.04` a run that builds the machine took 10 minutes 41 seconds. A run that reuses the stored image took 1 minute 2 seconds |
 
 ## Publish the site (one time)
 
@@ -201,6 +204,42 @@ Terms: https://docs.github.com/en/site-policy/github-terms/github-terms-for-addi
 
 Codespaces prebuilds can cut the Kali first start to about a minute. Set them up in the repository under Settings, then Codespaces. Prebuilds use your own storage allowance, so they are off by default.
 
+## Course labs on these machines
+
+On November 26, 2026 the lab handouts in the instructor's course folders were read and their steps were run in a local container built from `.devcontainer/kali/Dockerfile`, the image the Kali cloud machines use. The test scripts ran each command and compared the output with the answer keys.
+
+| Course | Labs | Machine | Result |
+| --- | --- | --- | --- |
+| MAC 237, 246, 247 (LaGuardia) | 36 classroom Python labs | Any Kali machine, including Kali in this tab | All 36 solutions pass their self-checks on a Kali cloud image and in Kali in this tab on the published site, where a course's 12 labs took 8 to 40 seconds. All 36 student starters run |
+| MAC 237, 246, 247 | 12 graded labs: system and network steps | Kali terminal or desktop | 37 of 39 checked steps pass: `systemctl` for ssh and Apache, `sshd -T`, users and password aging, `nft`, `iptables`, `tshark` capture and the evidence captures, `nmap -sV`, `gcc`, OpenSSL keys and certificates, Apache with TLS, `gpg`, pandas and flask, `apt`. See the two notes below |
+| MAC 247 | 8 graded Python scripts | Any Kali cloud machine | All 8 run to the end |
+| MAC 237, 246, 247 | 14 notebooks | Google Colab, or `python3` on Kali | 12 run to the end. 2 stop at a check that asks the student to fill in fields, as designed |
+| COSC 332 (Bowie State) | 4 graded labs, 7 targets | Kali terminal or desktop | All 23 answer-key steps pass: `strings`, `ltrace`, `strace`, `objdump`, `gdb`, byte patching, the `ptrace` bypasses, `upx` |
+| COSC 435, 442 | Lab 1 scanning, Lab 2 certificates, Lab 3 access control | Kali desktop with a target | `nmap` against 192.168.56.101, the OpenSSL and Apache steps and the user and group steps pass. Maltego needs `lab-install osint` and its own account. FreeRADIUS installs; its start was checked only with the IPv6 listener removed, because the test computer has no IPv6 |
+| COSC 435, 442 | Lab 4 firewall and intrusion detection | Kali desktop with a target | Snort installs and DVWA is on the target. pfSense is a separate operating system and is not included |
+| COSC 489 | Lab 2 web attacks, Lab 3 Metasploit, Lab 4 passwords | Kali desktop with a target | The DVWA SQL injection and `sqlmap` steps pass. `vsftpd_234_backdoor` gives a root session on the target. `john`, `hashcat`, `hashid` and `hydra` pass. `aircrack-ng` is installed; the course capture files were not tested |
+| COSC 489 | Lab 1 open source intelligence | Any Kali cloud machine | `whois` and `dig` pass. theHarvester and recon-ng come with `lab-install osint` and were not run |
+| COSC 112, 113 | Java exercises | Any Kali cloud machine | `lab-install java`, then `javac` and `java` compile and run a generics class |
+| COSC 330, 414 | C and C++ programs | Any Kali cloud machine | `gcc` and `g++` build and run, including `fork`. Kali in this tab has `gcc` but not `g++` |
+| MAC 233 | 11 in-class labs, 4 lab projects | Not covered | The labs need two Windows servers on one private network, snapshots and Hyper-V. Each Windows machine here is a single server |
+
+Not covered by these tests: anything inside a real codespace (the tests ran in a local container), Ghidra and edb (they need the desktop), Burp Suite, and the hosted CompTIA labs for COSC 435, which run on the vendor's own site.
+
+Two things differ from an older Kali lab computer:
+
+- `sshd -T` in OpenSSH 10.6 prints setting names with capital letters, for example `PermitRootLogin`. A handout that filters with `grep -E "^(permitrootlogin|passwordauthentication)"` finds nothing. Use `grep -iE`.
+- Kali no longer has a `pev` package. The same tools are in `readpe`, which is installed. Kali has no `gh` package either, so `gh` is installed from GitHub's own package source.
+
+The COSC 332 targets are 64-bit programs. They run on the Kali cloud machines. They cannot run in Kali in this tab, which is a 32-bit machine.
+
+### What the Kali machines add for these labs
+
+- `systemctl` works. A dev container has no systemd, so the image carries [docker-systemctl-replacement](https://github.com/gdraheim/docker-systemctl-replacement), a script that reads the same unit files and starts the service itself. `sudo systemctl start ssh`, `restart`, `disable --now`, `is-active` and `is-enabled` were checked.
+- Debuggers work. The machines start with `SYS_PTRACE` and without the default system call filter, so `gdb` can turn off address randomization.
+- Installed for the labs: `strace`, `ltrace`, `upx`, `radare2`, `readpe`, `yara`, `hexedit`, `patchelf`, an SSH server, `at`, `g++`, `gh`, `aircrack-ng`, `hcxtools`, and the Python packages pandas, numpy, matplotlib and flask.
+- New tool sets: `lab-install reverse` (Ghidra, edb, GEF and the Kali reverse engineering set), `lab-install java`, `lab-install osint`.
+- Kali Linux desktop with a target starts a second container, Metasploitable 2, at 192.168.56.101, the address the handouts use. It also serves DVWA at `http://192.168.56.101/dvwa/`. The target is pinned by its image digest and no port of it is forwarded.
+
 ## Files
 
 ```
@@ -210,6 +249,7 @@ Codespaces prebuilds can cut the Kali first start to about a minute. Set them up
   kali/scripts/                lab-info, lab-install, start-desktop and helpers
   kali/desktop-config/         XFCE settings for the browser desktop
   kali-desktop/                Kali desktop dev container
+  kali-targets/                Kali desktop plus the Metasploitable 2 target
   windows/compose.yml          Windows container, shared by the three versions
   windows-server-2019/         Dev container, VERSION 2019
   windows-server-2022/         Dev container, VERSION 2022
@@ -227,6 +267,8 @@ START-HERE.md                  Student quick guide, opens inside Kali machines
 - Kali Linux images by the Kali team: https://www.kali.org/docs/containers/official-kalilinux-docker-images/
 - Windows in a container by the dockur/windows project (MIT license): https://github.com/dockur/windows
 - Browser desktop by noVNC and TigerVNC.
+- systemctl in the Kali containers by docker-systemctl-replacement, Guido U. Draheim (EUPL license): https://github.com/gdraheim/docker-systemctl-replacement
+- Practice target: Metasploitable 2 by Rapid7, from the `tleemcjr/metasploitable2` image on Docker Hub. DVWA is the Damn Vulnerable Web Application project.
 - Kali in this tab runs on v86 by Fabian Hemmer and contributors (BSD 2-Clause license): https://github.com/copy/v86
 - Its BIOS files are SeaBIOS and the Bochs VGA BIOS (LGPL). Its terminal is xterm.js (MIT license). Its kernel is from Debian 12 (GPL version 2).
 

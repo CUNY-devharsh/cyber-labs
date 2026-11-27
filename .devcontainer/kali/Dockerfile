@@ -64,6 +64,51 @@ COPY scripts/lab-banner.sh /etc/profile.d/lab-banner.sh
 RUN chmod 0755 /usr/local/bin/lab-info /usr/local/bin/lab-install \
  && echo '[ -r /etc/profile.d/lab-banner.sh ] && . /etc/profile.d/lab-banner.sh' >> /etc/zsh/zshrc
 
+# Step 3: what the course labs need on top of the general tool set.
+#   Reverse engineering (COSC 332): strace ltrace upx radare2 readpe yara
+#   Python labs (MAC 246, MAC 247): pandas numpy matplotlib flask
+#   System labs: an SSH server, at, a C++ compiler
+#   Wireless captures (COSC 489): aircrack-ng hcxtools
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends \
+      strace ltrace upx-ucl radare2 readpe yara hexedit patchelf \
+      python3-pandas python3-numpy python3-matplotlib python3-flask \
+      openssh-server at g++ aircrack-ng hcxtools \
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/*
+
+# GitHub's command line tool. Kali has no gh package, so it comes from
+# GitHub's own package source (https://cli.github.com).
+RUN curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+      -o /usr/share/keyrings/githubcli-archive-keyring.gpg \
+ && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
+      > /etc/apt/sources.list.d/github-cli.list \
+ && apt-get update \
+ && apt-get install -y --no-install-recommends gh \
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/*
+
+# systemctl for containers. A dev container does not run systemd, so the real
+# systemctl cannot start a service. This script reads the same unit files and
+# starts the service itself, so "sudo systemctl start ssh" in a lab works.
+#   https://github.com/gdraheim/docker-systemctl-replacement (EUPL license)
+# It takes the place of /usr/bin/systemctl (the original is kept beside it as
+# systemctl.systemd), because sudo only looks in /usr/sbin and /usr/bin.
+# scripts/systemctl is a small front end: status questions work without sudo.
+ARG SYSTEMCTL_TAG=v1.7.1097
+ARG SYSTEMCTL_SHA256=5f5a47f321c7a8881dfd01f774106dc4012d664bee238eada86a7112674fea93
+COPY scripts/systemctl /tmp/systemctl-front
+RUN mkdir -p /usr/lib/lab \
+ && curl -fsSL "https://raw.githubusercontent.com/gdraheim/docker-systemctl-replacement/${SYSTEMCTL_TAG}/files/docker/systemctl3.py" \
+      -o /usr/lib/lab/systemctl3.py \
+ && echo "${SYSTEMCTL_SHA256}  /usr/lib/lab/systemctl3.py" | sha256sum -c - \
+ && chmod 0755 /usr/lib/lab/systemctl3.py \
+ && dpkg-divert --local --rename --divert /usr/bin/systemctl.systemd --add /usr/bin/systemctl \
+ && install -m 0755 /tmp/systemctl-front /usr/bin/systemctl \
+ && rm /tmp/systemctl-front \
+ && mkdir -p /etc/systemd/system/ssh.service.d \
+ && printf '[Unit]\nConditionPathExists=\n' > /etc/systemd/system/ssh.service.d/lab.conf
+
 USER kali
 WORKDIR /home/kali
 CMD ["/usr/bin/zsh"]

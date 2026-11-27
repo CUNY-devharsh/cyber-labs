@@ -63,6 +63,18 @@ window.LAB_CONFIG = {
       status: "ready"
     },
     {
+      id: "kali-targets",
+      family: "kali",
+      name: "Kali Linux desktop with a target",
+      summary: "The Kali desktop plus Metasploitable 2, a server built to be attacked, on a private network at 192.168.56.101. For scanning, exploit and web attack labs.",
+      devcontainerPath: ".devcontainer/kali-targets/devcontainer.json",
+      machine: "basicLinux32gb",
+      firstStart: "First start takes longer than the Kali desktop, because it also downloads the target.",
+      signIn: "User kali, password kali",
+      opens: "The desktop opens in a new tab.",
+      status: "beta"
+    },
+    {
       id: "kali-terminal",
       family: "kali",
       name: "Kali Linux terminal",

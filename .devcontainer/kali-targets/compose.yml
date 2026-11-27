@@ -1,0 +1,54 @@
+# Kali Linux desktop with a practice target on a private network.
+#
+# Two containers share the network 192.168.56.0/24, the addresses the course
+# handouts use:
+#   192.168.56.10    kali     the machine you work on
+#   192.168.56.101   target   Metasploitable 2, an intentionally vulnerable
+#                             Linux server from Rapid7. It also serves DVWA
+#                             at http://192.168.56.101/dvwa/ (admin, password)
+#
+# The target is reachable only from inside this codespace. No port of the
+# target is forwarded. Never put it on a public network.
+#
+# Target image: tleemcjr/metasploitable2 on Docker Hub, a copy of the
+# Metasploitable 2 disk as a container image. It is pinned by digest so the
+# content cannot change.
+services:
+  kali:
+    build:
+      context: ../kali
+      dockerfile: Dockerfile
+      target: desktop
+    hostname: kali
+    init: true
+    command: sleep infinity
+    shm_size: 1g
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
+      - SYS_PTRACE
+    security_opt:
+      - seccomp=unconfined
+    devices:
+      - /dev/net/tun
+    volumes:
+      - ../..:/workspaces/cyber-labs:cached
+    networks:
+      lab:
+        ipv4_address: 192.168.56.10
+
+  target:
+    image: tleemcjr/metasploitable2@sha256:e559450b37dccc1909eafa2df5b20bb052e1bd801246f4539a3ef183d5f7288a
+    hostname: metasploitable
+    command: sh -c "/bin/services.sh; sleep infinity"
+    restart: unless-stopped
+    networks:
+      lab:
+        ipv4_address: 192.168.56.101
+
+networks:
+  lab:
+    ipam:
+      config:
+        - subnet: 192.168.56.0/24
+          gateway: 192.168.56.1

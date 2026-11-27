@@ -6,6 +6,9 @@ set -euo pipefail
 
 declare -A SETS=(
   [metasploit]="metasploit-framework"
+  [reverse]="kali-tools-reverse-engineering ghidra edb-debugger gef"
+  [java]="default-jdk"
+  [osint]="theharvester recon-ng maltego spiderfoot"
   [burp]="burpsuite"
   [zap]="zaproxy"
   [ids]="suricata snort"
@@ -19,6 +22,9 @@ declare -A SETS=(
 )
 declare -A ABOUT=(
   [metasploit]="Metasploit Framework (about 600 MB download)"
+  [reverse]="Ghidra, edb, GEF and the Kali reverse engineering set (large, Ghidra and edb need the desktop)"
+  [java]="Java compiler and runtime (javac, java)"
+  [osint]="theHarvester, recon-ng, Maltego and SpiderFoot (Maltego needs the desktop)"
   [burp]="Burp Suite Community (about 500 MB download, needs the desktop)"
   [zap]="OWASP ZAP web proxy (needs the desktop)"
   [ids]="Suricata and Snort intrusion detection"
@@ -30,7 +36,7 @@ declare -A ABOUT=(
   [headless]="All Kali command line tools (about 1.5 GB download)"
   [default]="The full default Kali tool set (about 2.2 GB download)"
 )
-ORDER=(metasploit burp zap ids webtargets windows forensics seclists top10 headless default)
+ORDER=(metasploit reverse java osint burp zap ids webtargets windows forensics seclists top10 headless default)
 
 if [ "$#" -eq 0 ]; then
   echo "Optional tool sets:"

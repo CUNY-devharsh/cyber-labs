@@ -14,6 +14,9 @@ You are the user `kali`. The password is `kali`. `sudo` does not ask for a passw
 | --- | --- |
 | `lab-info` | Shows the Kali version and which tools are installed |
 | `lab-install` | Lists bigger tool sets you can add, such as Metasploit and Burp Suite |
+| `lab-install reverse` | Adds Ghidra, edb and the Kali reverse engineering set |
+| `lab-install java` | Adds the Java compiler |
+| `sudo systemctl start ssh` | Starts a service. `systemctl` works here as it does on a full Kali system |
 | `sudo apt update && sudo apt install NAME` | Installs any other Kali package |
 
 ## Use the desktop
@@ -25,6 +28,21 @@ If the tab did not open: click Ports in the bottom panel, hover over port 6080, 
 If the desktop tab shows an error right after the machine starts: wait a minute and reload it.
 
 If the desktop is black or frozen: run `start-desktop --restart` in the terminal, then reload the desktop tab.
+
+## Attack the practice target
+
+This part applies only if you launched Kali Linux desktop with a target.
+
+A second machine runs next to yours: Metasploitable 2, a server built to be attacked. Its address is `192.168.56.101`. Your machine is `192.168.56.10`.
+
+```
+nmap -sn 192.168.56.0/24
+nmap -sV 192.168.56.101
+```
+
+DVWA runs on the target at `http://192.168.56.101/dvwa/`. Sign in with `admin` and `password`. The target's own login is `msfadmin` with password `msfadmin`. For Metasploit, run `lab-install metasploit` first and set `LHOST` to `192.168.56.10`.
+
+Attack only this target. It exists only inside your machine and is reset when you rebuild it.
 
 ## Save your work
 

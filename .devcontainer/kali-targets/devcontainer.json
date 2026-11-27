@@ -1,0 +1,52 @@
+{
+  "name": "Kali Linux 2026 desktop with a practice target",
+  "dockerComposeFile": "compose.yml",
+  "service": "kali",
+  "workspaceFolder": "/workspaces/cyber-labs",
+  "remoteUser": "kali",
+  "forwardPorts": [
+    6080
+  ],
+  "portsAttributes": {
+    "6080": {
+      "label": "Kali desktop",
+      "onAutoForward": "openBrowser"
+    },
+    "5901": {
+      "label": "Desktop internals",
+      "onAutoForward": "ignore"
+    }
+  },
+  "otherPortsAttributes": {
+    "onAutoForward": "ignore"
+  },
+  "postStartCommand": "start-desktop",
+  "customizations": {
+    "codespaces": {
+      "openFiles": [
+        "START-HERE.md"
+      ]
+    },
+    "vscode": {
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "zsh",
+        "terminal.integrated.profiles.linux": {
+          "zsh": {
+            "path": "/usr/bin/zsh",
+            "args": [
+              "-l"
+            ]
+          }
+        },
+        "workbench.startupEditor": "none",
+        "files.exclude": {
+          "docs": true,
+          "browser-vm": true,
+          ".devcontainer": true,
+          ".github": true,
+          ".gitignore": true
+        }
+      }
+    }
+  }
+}
