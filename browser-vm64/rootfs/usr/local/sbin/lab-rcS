@@ -18,3 +18,9 @@ echo 3 > /proc/sys/kernel/printk
 # The shared folder is opened later by lab-start. Have its driver ready.
 modprobe 9pnet_virtio 2>/dev/null
 modprobe 9p 2>/dev/null
+# Warm Python: load the big libraries once, now, so that python3 starts in
+# about a second in the tab. See /usr/local/lib/lab/pywarm.py.
+if [ -x /usr/local/bin/python3 ] && [ -f /usr/local/lib/lab/pywarm.py ]; then
+  HOME=/root OPENBLAS_NUM_THREADS=1 setsid /usr/bin/python3 /usr/local/lib/lab/pywarm.py \
+    > /run/lab-pywarm.log 2>&1 < /dev/null &
+fi

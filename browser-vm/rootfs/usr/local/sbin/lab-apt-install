@@ -15,6 +15,8 @@ if ! apt-get install -y --no-install-recommends $have; then
     if apt-get install -y --no-install-recommends "$p"; then ok="$ok $p"; else miss="$miss $p"; fi
   done
 fi
-echo "$miss" | tr ' ' '\n' | sed '/^$/d' > /etc/lab-missing-packages
+# Keep the names from an earlier call in the same build.
+{ cat /etc/lab-missing-packages 2>/dev/null; echo "$miss" | tr ' ' '\n'; } | sed '/^$/d' | sort -u > /etc/lab-missing-packages.new
+mv /etc/lab-missing-packages.new /etc/lab-missing-packages
 echo "lab-apt-install: not installed:$miss"
 exit 0

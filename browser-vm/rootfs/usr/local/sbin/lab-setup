@@ -3,4 +3,11 @@
 echo kali > /etc/hostname
 hostname kali
 cp /etc/hosts.lab /etc/hosts
+# x86-64 programs go to the lab runner. systemd-binfmt reads the same rule from
+# /usr/lib/binfmt.d. This is the fallback in case it has not run.
+if [ ! -e /proc/sys/fs/binfmt_misc/lab-x86_64 ]; then
+  modprobe binfmt_misc 2>/dev/null
+  mountpoint -q /proc/sys/fs/binfmt_misc || mount -t binfmt_misc binfmt_misc /proc/sys/fs/binfmt_misc 2>/dev/null
+  grep -v '^#' /usr/lib/binfmt.d/lab-x86_64.conf > /proc/sys/fs/binfmt_misc/register 2>/dev/null
+fi
 exit 0

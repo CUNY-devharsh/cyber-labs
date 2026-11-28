@@ -19,10 +19,12 @@
     this.gunzipSync = gunzipSync;
     this.empty = new Set(meta.empty);
     this.cache = new Map();      /* piece number -> Uint8Array */
-    this.pending = new Set();    /* pieces being fetched in the background */
+    this.pending = new Map();    /* piece number -> AbortController of its background request */
+    this.maxPending = 2;         /* background requests at a time, so that a request the
+                                    machine waits for always finds a free connection */
     this.maxCached = 320;        /* about 320 MB of unpacked pieces */
     this.zero = new Uint8Array(meta.chunk);
-    this.stats = { waited: 0, background: 0, bytes: 0, waitMs: 0 };
+    this.stats = { waited: 0, background: 0, bytes: 0, waitMs: 0, collisions: 0, failed: 0 };
     this.onActivity = null;
     this.onError = null;
   }
@@ -44,6 +46,19 @@
      read here reaches the machine as a broken disk. */
   LabDisk.prototype.fetchNow = function (i) {
     var started = performance.now(), packed = null, status = 0;
+    /* A background request for this piece may be under way. It cannot finish
+       while this thread waits here, and the browser makes a second request
+       for the same address wait for the first. The two then wait for each
+       other and the machine stops for good, with no error. So when the piece
+       is on its way, stop that request and ask under another address. Where
+       the browser allows it (in a worker), also give up on one answer after
+       20 seconds and ask again. */
+    var other = "";
+    if (this.pending.has(i)) {
+      other = "&now=1";
+      this.stats.collisions++;
+      try { this.pending.get(i).abort(); } catch (e) { /* it ends on its own later */ }
+    }
     for (var attempt = 0; attempt < 5 && !packed; attempt++) {
       if (attempt) {
         var until = performance.now() + 400 * attempt;
@@ -51,7 +66,8 @@
       }
       try {
         var xhr = new XMLHttpRequest();
-        xhr.open("GET", this.url(i) + (attempt ? "&try=" + attempt : ""), false);
+        xhr.open("GET", this.url(i) + other + (attempt ? "&try=" + attempt : ""), false);
+        try { xhr.timeout = 20000; } catch (e) { /* a page's main thread may not set it */ }
         xhr.overrideMimeType("text/plain; charset=x-user-defined");
         xhr.send();
         status = xhr.status;
@@ -60,7 +76,7 @@
           packed = new Uint8Array(text.length);
           for (var k = 0; k < text.length; k++) { packed[k] = text.charCodeAt(k) & 0xff; }
         }
-      } catch (e) { status = 0; }
+      } catch (e) { status = 0; this.stats.failed++; }
     }
     if (!packed) {
       if (this.onError) { this.onError(i, status); }
@@ -78,8 +94,10 @@
   LabDisk.prototype.fetchLater = function (i) {
     var self = this;
     if (i >= this.meta.count || this.empty.has(i) || this.cache.has(i) || this.pending.has(i)) { return; }
-    this.pending.add(i);
-    fetch(this.url(i)).then(function (res) {
+    if (this.pending.size >= this.maxPending) { return; }
+    var stop = new AbortController();
+    this.pending.set(i, stop);
+    fetch(this.url(i), { signal: stop.signal }).then(function (res) {
       if (!res.ok) { throw new Error("HTTP " + res.status); }
       self.stats.bytes += Number(res.headers.get("content-length") || 0);
       return new Response(res.body.pipeThrough(new DecompressionStream("gzip"))).arrayBuffer();
@@ -87,7 +105,7 @@
       self.remember(i, new Uint8Array(buf));
       self.stats.background++;
     }).catch(function () { /* QEMU will ask again and wait for it */ }).then(function () {
-      self.pending.delete(i);
+      if (self.pending.get(i) === stop) { self.pending.delete(i); }
     });
   };
 

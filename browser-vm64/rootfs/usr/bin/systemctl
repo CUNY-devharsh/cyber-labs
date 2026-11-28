@@ -27,6 +27,14 @@ get() { sed -n "s/^$1=//p" "$2"; }
 strip() { local c="$1"; while [ -n "$c" ]; do case "$c" in [-@+!:]*) c="${c#?}" ;; *) break ;; esac; done; echo "${c//%t//run}"; }
 main_pid() { local p; p=$(cat "$RUN/$1.pid" 2>/dev/null); [ -n "$p" ] && [ -d "/proc/$p" ] && echo "$p"; }
 is_active() { [ -n "$(main_pid "$1")" ]; }
+listeners() {  # how many TCP sockets are listening now (read from /proc, no program start)
+  local n=0 l f
+  for f in /proc/net/tcp /proc/net/tcp6; do
+    [ -r "$f" ] || continue
+    while read -r l; do case "$l" in *" 0A "*) n=$((n + 1)) ;; esac; done < "$f"
+  done
+  echo "$n"
+}
 need_root() { [ "$(id -u)" = 0 ] && return 0; echo "systemctl $verb needs root. Run it with sudo." >&2; exit 1; }
 load_env() {
   local f="$1" line
@@ -45,10 +53,11 @@ find_pid() {  # after a start: the service's main process
   return 1
 }
 start_unit() {
-  local u="$1" f type cmd pre dir pid
+  local u="$1" f type cmd pre dir pid before i
   f=$(unit_file "$u") || { echo "Failed to start $u.service: Unit $u.service not found." >&2; return 5; }
   is_active "$u" && return 0
   mkdir -p "$RUN" && chmod 755 "$RUN"
+  before=$(listeners)
   (
     load_env "$f"
     for dir in $(get RuntimeDirectory "$f"); do mkdir -p "/run/$dir"; done
@@ -71,7 +80,15 @@ start_unit() {
       [ -d "/proc/$pid" ] || { echo "Job for $u.service failed: $(tail -3 "$RUN/$u.log" | tr '\n' ' ')" >&2; exit 1; }
     fi
     echo "$pid" > "$RUN/$u.pid"; date '+%a %Y-%m-%d %H:%M:%S %Z' > "$RUN/$u.since"
-  )
+  ) || return $?
+  # A server is ready when it listens. On this slow machine that can be a few
+  # seconds after the program starts, so wait for a new listening socket. A
+  # service that opens none costs this wait once.
+  for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20; do
+    [ "$(listeners)" -gt "$before" ] && break
+    sleep 0.5
+  done
+  return 0
 }
 stop_unit() {
   local u="$1" f pid cmd i

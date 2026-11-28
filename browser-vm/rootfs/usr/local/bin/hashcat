@@ -1,0 +1,129 @@
+#!/bin/bash
+# hashcat for the tab machines.
+#
+# The real hashcat needs a graphics card, or a fast processor with an OpenCL
+# runtime. A browser tab has neither: a test build took 469 seconds to try
+# three words. This script accepts the hashcat commands the labs use and runs
+# the same attack with John the Ripper, which is installed and is fast enough
+# for word lists and short masks. It prints results the way hashcat does
+# (hash:password). If a real hashcat is installed, this script starts it.
+#
+#   hashcat -m 0 -a 0 hashes.txt wordlist.txt      word list attack
+#   hashcat -m 0 -a 3 hashes.txt ?l?l?l?d?d        mask attack
+#   hashcat -m 0 hashes.txt --show                 show what was cracked
+#   hashcat --help | grep -i md5                   find a hash mode
+[ -x /usr/bin/hashcat ] && exec /usr/bin/hashcat "$@"
+
+modes="0|raw-md5|MD5
+100|raw-sha1|SHA1
+900|raw-md4|MD4
+1000|nt|NTLM
+1400|raw-sha256|SHA2-256
+1700|raw-sha512|SHA2-512
+3000|lm|LM
+500|md5crypt|md5crypt, MD5 (Unix), Cisco-IOS \$1\$ (MD5)
+1800|sha512crypt|sha512crypt \$6\$, SHA512 (Unix)
+7400|sha256crypt|sha256crypt \$5\$, SHA256 (Unix)
+3200|bcrypt|bcrypt \$2*\$, Blowfish (Unix)"
+note="hashcat: this machine has no graphics card. John the Ripper runs the attack instead."
+
+help() {
+  echo "hashcat (lab front end for John the Ripper)"
+  echo
+  echo "Usage: hashcat -m MODE -a ATTACK hashfile [wordlist ... | mask]"
+  echo "       hashcat -m MODE hashfile --show"
+  echo
+  echo "- [ Hash modes ] -"
+  echo
+  echo "      # | Name                                                       | Category"
+  echo "  ======+============================================================+======================================"
+  echo "$modes" | while IFS='|' read -r number format name; do printf '  %5s | %-58s | %s\n' "$number" "$name" "Raw Hash or Operating System"; done
+  echo
+  echo "- [ Attack Modes ] -"
+  echo
+  echo "  # | Mode"
+  echo " ===+======"
+  echo "  0 | Straight (word list)"
+  echo "  3 | Brute-force (mask: ?l lower, ?u upper, ?d digit, ?s symbol, ?a all)"
+  echo
+  echo "Other modes, rule files and WPA (22000) are not available in a browser tab."
+  echo "For a Wi-Fi capture use aircrack-ng here, or hashcat on the cloud Kali machine."
+}
+
+mode=0 attack=0 show=0 outfile="" custom=() rest=()
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -h|--help) help; exit 0 ;;
+    -V|--version) echo "v0 (lab front end, John the Ripper engine: $(john 2>/dev/null | head -1))"; exit 0 ;;
+    -m) mode=$2; shift ;;  -m*) mode=${1#-m} ;;  --hash-type=*) mode=${1#*=} ;;
+    -a) attack=$2; shift ;;  -a*) attack=${1#-a} ;;  --attack-mode=*) attack=${1#*=} ;;
+    -o) outfile=$2; shift ;;  --outfile=*) outfile=${1#*=} ;;
+    -1|-2|-3|-4) custom+=("$1=$2"); shift ;;
+    --show) show=1 ;;
+    -w|--workload-profile|-d|--session|-n|-u|--status-timer|--outfile-format|-D) shift ;;
+    -r|--rules-file) echo "hashcat: rule files are not available in a browser tab. Run this on the cloud Kali machine." >&2; exit 1 ;;
+    -*) ;;                                   # --force, -O, --potfile-disable, --quiet and the like
+    *) rest+=("$1") ;;
+  esac
+  shift
+done
+format=$(echo "$modes" | awk -F'|' -v m="$mode" '$1 == m {print $2}')
+name=$(echo "$modes" | awk -F'|' -v m="$mode" '$1 == m {print $3}')
+if [ -z "$format" ]; then
+  echo "hashcat: hash mode $mode is not available in a browser tab. Run hashcat --help for the list." >&2
+  [ "$mode" = 22000 ] || [ "$mode" = 2500 ] && echo "For a Wi-Fi capture use: aircrack-ng -w wordlist.txt capture.cap" >&2
+  exit 1
+fi
+hashes=${rest[0]:-}
+[ -f "$hashes" ] || { echo "hashcat: hash file not found: ${hashes:-(none given)}" >&2; exit 1; }
+pot="$HOME/.local/share/hashcat/hashcat.potfile"
+mkdir -p "$(dirname "$pot")"
+
+cracked() {  # the hashes of the file that are in the pot, as hash:password
+  [ -f "$pot" ] || return 0
+  awk -F: 'NR == FNR { h = $1; p = substr($0, length($1) + 2)
+             sub(/^\$dynamic_[0-9]+\$/, "", h); sub(/^\$(NT|LM|SHA256|SHA512|MD4)\$/, "", h); found[tolower(h)] = p; next }
+           { h = $0; sub(/\r$/, "", h); if (h ~ /^[^:$]+:[$0-9a-fA-F]/) sub(/^[^:]+:/, "", h); split(h, part, ":")
+             key = (h ~ /^\$/) ? tolower(part[1]) : tolower(h)
+             if (key in found) print ((h ~ /^\$/) ? part[1] : h) ":" found[key] }' "$pot" "$hashes"
+}
+
+if [ "$show" = 1 ]; then cracked; exit 0; fi
+total=$(grep -c . "$hashes")
+echo "$note" >&2
+if [ "$attack" = 3 ]; then
+  mask=${rest[1]:-}
+  [ -n "$mask" ] || { echo "hashcat: give a mask, for example ?l?l?l?d?d" >&2; exit 1; }
+  count=$(echo "$mask" | awk '{ n = 1; s = $0
+      while (length(s) > 0) { c = substr(s, 1, 2); k = 1
+        if (c == "?l" || c == "?u") k = 26; else if (c == "?d") k = 10; else if (c == "?s") k = 33; else if (c == "?a") k = 95; else if (c == "?b") k = 256
+        s = substr(s, (substr(s, 1, 1) == "?") ? 3 : 2); n *= k }
+      printf "%.0f", n }')
+  echo "Mask $mask has $count candidates." >&2
+  if [ "${#count}" -gt 9 ]; then
+    echo "That is far more than a browser tab can try. The attack starts anyway; press Ctrl-C" >&2
+    echo "to stop it. Run a mask this long with hashcat on the cloud Kali machine or a PC with a graphics card." >&2
+  fi
+  john --format="$format" --pot="$pot" --mask="$mask" "${custom[@]}" "$hashes" >/dev/null 2>/tmp/hashcat-john.$$
+else
+  [ ${#rest[@]} -ge 2 ] || { echo "hashcat: give a word list, for example /usr/share/wordlists/rockyou.txt" >&2; exit 1; }
+  for list in "${rest[@]:1}"; do
+    if [ ! -f "$list" ]; then
+      echo "hashcat: word list not found: $list" >&2
+      [ -f "$list.gz" ] && echo "It is packed. Unpack it first: sudo gunzip $list.gz" >&2
+      exit 1
+    fi
+    john --format="$format" --pot="$pot" --wordlist="$list" "$hashes" >/dev/null 2>/tmp/hashcat-john.$$
+  done
+fi
+rm -f /tmp/hashcat-john.$$
+result=$(cracked)
+[ -n "$result" ] && echo "$result"
+[ -n "$outfile" ] && echo "$result" > "$outfile"
+got=$(echo "$result" | grep -c .)
+echo
+echo "Session..........: hashcat (John the Ripper engine)"
+echo "Status...........: $([ "$got" -ge "$total" ] && echo Cracked || echo Exhausted)"
+echo "Hash.Mode........: $mode ($name)"
+echo "Hash.Target......: $hashes"
+echo "Recovered........: $got/$total ($(awk -v g="$got" -v t="$total" 'BEGIN { printf "%.2f", (t ? 100 * g / t : 0) }')%) Digests"

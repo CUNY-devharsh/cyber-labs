@@ -36,8 +36,10 @@ if [ ! -s "$QEMU_OUT/web/qemu-system-x86_64.wasm" ] || [ ! -x "$QEMU_OUT/native/
 fi
 rm -rf "$SITE/qemu" && mkdir -p "$SITE/qemu"
 cp "$QEMU_OUT/web/"* "$SITE/qemu/"
-# The page downloads the program itself and unpacks it, so keep it packed:
-# 41 MB becomes 13 MB on the site.
+# QEMU is built with 28 MB of debug data that only a debugger reads. Leave it
+# out of the copy on the site. The page downloads the program itself and
+# unpacks it, so keep it packed: 41 MB becomes 3.4 MB on the site.
+python3 "$DIR/tools/strip-wasm-debug.py" "$QEMU_OUT/web/qemu-system-x86_64.wasm" "$SITE/qemu/qemu-system-x86_64.wasm"
 gzip -9 -f "$SITE/qemu/qemu-system-x86_64.wasm"
 
 echo "== 2/6 terminal files"

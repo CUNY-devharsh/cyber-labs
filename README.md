@@ -55,10 +55,11 @@ Every machine starts on 2 cores, the smallest size. GitHub ignores a machine siz
 | Kernel | Linux 6.1.0-57-686, the 32-bit long-term kernel from Debian 12. Kali stopped building a 32-bit kernel in October 2024 |
 | User space | Kali rolling 2026.3, 32-bit packages from the official `kalilinux/kali-rolling` image |
 | Memory | 384 MB for the machine |
-| Tools | nmap, hydra, john, sqlmap, nikto, gobuster, ffuf, tshark, tcpdump, smbclient, aircrack-ng, gdb, strace, ltrace, radare2, upx, yara, readpe, gcc, g++, Java (see the Java kit below), python3 with pandas, numpy, matplotlib and flask, FreeRADIUS, Snort and google-authenticator, plus OpenSSH server and Apache as practice targets. No hashcat, no VPN clients, no Metasploit, no desktop |
+| Tools | nmap, hydra, john, sqlmap, nikto, gobuster, ffuf, tshark, tcpdump, smbclient, aircrack-ng, gdb, strace, ltrace, radare2, upx, yara, readpe, gcc, g++, Java (see the Java kit below), python3 with pandas, numpy, matplotlib and flask, FreeRADIUS, Snort and google-authenticator, plus OpenSSH server and Apache as practice targets. `hashcat` is a front end that runs the attack with John the Ripper (see The hashcat command in the tab machines). No VPN clients, no Metasploit, no desktop |
 | Console | The student's terminal is a virtio console (`hvc0`) shown with xterm.js. A hidden root shell on `ttyS0` lets the page set the clock |
-| Download | 20 MB at start. After that each file is fetched the first time the machine reads it. The whole file store is 653 MB in 44,668 files |
+| Download | 20 MB at start. After that each file is fetched the first time the machine reads it. The whole file store is about 680 MB in about 45,400 files |
 | Network | None. `lab-targets` starts SSH and a web server inside the machine to attack |
+| x86-64 programs | The kernel is 32-bit, so a lab runner starts them, and `gdb`, `strace` and `ltrace` work on them (see x86-64 programs in the 32-bit tab machine) |
 | Student work | Kept in the tab's memory. Save machine stores a snapshot in the browser (IndexedDB). Send a file and Get a file move files in and out of `~/labs` |
 
 It is labeled Beta on the site. Treat it as an unofficial build: Kali tools on a kernel that Kali does not ship.
@@ -112,9 +113,41 @@ Java starts slowly on an emulated processor. Two things help. `javac` starts fro
 
 Kali has no Java for 32-bit x86 with a compiler inside the virtual machine. The 32-bit kit is the Zero build of OpenJDK 25, which interprets every instruction. It works and it is slow.
 
+## x86-64 programs in the 32-bit tab machine
+
+The COSC 332 targets are x86-64 programs. A 32-bit kernel cannot start one, and its debugger interface cannot trace one. These parts make the targets work in Kali in this tab, so the same handout works on every machine:
+
+| Part | What it does |
+| --- | --- |
+| `/usr/local/bin/qemu-x86_64` | The lab runner: the user-mode part of QEMU 9.2.4, built by the stage `x64run` of `browser-vm/Dockerfile`. It runs one x86-64 program on a 32-bit system. It has to be the 9.2 series, because QEMU 10.0 removed 64-bit programs on 32-bit hosts |
+| `browser-vm/x64/qemu-lab.patch` | Changes a reverse engineering lab needs. `PTRACE_TRACEME` works once when no debugger is attached and fails when one is, as on Linux, so an anti-debugging target behaves the same. At a `catch syscall` stop gdb sees -38 on entry and the result on return, and it can change the result. The runner prints nothing when gdb ends the program. The floating point tests are left out of the build, because they need two more source trees |
+| `/usr/lib/binfmt.d/lab-x86_64.conf` | Tells the kernel to hand every x86-64 program to the runner, so `./program` works |
+| `/usr/local/bin/gdb` and `/usr/local/share/lab/x64-gdb.py` | gdb debugs a 32-bit program directly. For an x86-64 program `run`, `start` and `starti` start it in the runner and attach to the runner's debugger port. `break`, `finish`, `stepi`, `x`, `info registers`, `catch syscall` and `set $rax = 0` then work as the handout says |
+| `/usr/local/bin/strace` | Starts the real strace for a 32-bit program. For an x86-64 program it prints the runner's system call log in strace's layout. It supports `-f`, `-o` and `-e trace=` with names and the classes `%file`, `%process` and `%network` |
+| `/usr/local/bin/ltrace` and `/usr/local/share/lab/x64-ltrace.py` | Starts the real ltrace for a 32-bit program. For an x86-64 program a gdb script stops at each entry of the procedure linkage table and prints the call, its arguments and its result in ltrace's layout |
+| `libc6-amd64`, `lib64gcc` and `lib64stdc++` packages | The C and C++ libraries an x86-64 program loads, and the files `gcc -m64` needs to build one. Plain `gcc` builds 32-bit programs |
+
+Each front end prints one line that says the lab runner is in use. Limits: an x86-64 program runs on two emulators stacked, so it is slow. `strace -p` and `gdb -p` cannot attach to an x86-64 program that is already running. A library built for the `LD_PRELOAD` exercise needs `gcc -m64`.
+
+On November 28, 2026 all 23 steps of the COSC 332 answer key passed in this machine in 126 seconds, in headless Chrome against a local copy of the site. Before this change 11 passed.
+
+## The hashcat command in the tab machines
+
+hashcat needs a graphics card, or a fast processor with an OpenCL runtime. A browser tab has neither: a test build of the 32-bit machine with hashcat took 469 seconds to try three words. Both tab machines have `/usr/local/bin/hashcat` instead, a script that accepts the commands the COSC 489 password lab uses and runs the same attack with John the Ripper:
+
+| Command | Result |
+| --- | --- |
+| `hashcat --help \| grep -i md5` | Lists the hash modes the script knows: 0, 100, 900, 1000, 1400, 1700, 3000, 500, 1800, 7400 and 3200 |
+| `hashcat -m 0 -a 0 hashes.txt wordlist.txt` | Word list attack. Prints `hash:password` lines and a status block |
+| `hashcat -m 0 -a 3 hashes.txt ?l?l?d?d` | Mask attack. The script prints how many candidates the mask has. The lab's mask `?u?l?l?l?l?d?d?d` has 11.9 billion, which no browser tab can try. The script says so and starts anyway |
+| `hashcat -m 0 hashes.txt --show` | Shows what was cracked |
+| `hashcat -m 22000 ...` | Not available. The script points to `aircrack-ng`, which is installed |
+
+The first line of its output says that John the Ripper runs the attack. The lab task is about graphics card speed, so the full mask attack and the Wi-Fi attack with the rockyou list belong on a computer with a graphics card.
+
 ## Kali in this tab, 64-bit
 
-The reverse engineering targets of COSC 332 are 64-bit programs. The 32-bit machine cannot run them, so the site has a second machine with a 64-bit kernel. It is much slower. Use it only when a lab needs it.
+This machine has the 64-bit kernel that Kali ships, so an x86-64 program runs on it directly and the real `gdb`, `strace` and `ltrace` trace it. Its emulator is much slower than the 32-bit one. The 32-bit machine runs the COSC 332 targets too, through its lab runner. Use this machine when a lab needs a real 64-bit system.
 
 | Item | Value |
 | --- | --- |
@@ -125,7 +158,7 @@ The reverse engineering targets of COSC 332 are 64-bit programs. The 32-bit mach
 | Memory | 512 MB for the machine |
 | Tools | The reverse engineering set (gdb, strace, ltrace, objdump, readelf, radare2, upx, yara, readpe, patchelf, hexedit), gcc, g++, Java, python3 with pandas, numpy, matplotlib and flask, and the system and network set: OpenSSH, Apache, nftables, iptables, nmap, tshark, tcpdump, john, hydra, aircrack-ng, sqlmap, nikto, gnupg, git, FreeRADIUS, Snort, google-authenticator. `lab-targets` starts SSH and a web server to practice on. No hashcat, no Metasploit, no desktop |
 | Console | The serial port `ttyS0`, shown with xterm.js through xterm-pty |
-| Download | About 71 MB at start: the saved state (55 MB) and QEMU (13 MB). The disk is 1.8 GB, cut into 1,697 pieces that total 669 MB compressed. A piece is fetched the first time the machine reads it |
+| Download | About 85 MB at start: the saved state (80 MB, with Python and its data libraries already loaded) and QEMU (3.4 MB, without its debug data). The disk is 1.8 GB, cut into 1,756 pieces that total 691 MB compressed. A piece is fetched the first time the machine reads it |
 | Network | None |
 | Student work | The folder `~/labs` is shared with the page. Send a file and Get a file use it. Save my files stores the folder in the browser (IndexedDB), up to 256 MB, and the page puts it back at the next start. Everything else starts fresh each time |
 | Browser | QEMU's threads share memory, which browsers allow only on a cross-origin isolated page. GitHub Pages cannot send the two headers for that, so the service worker `sw.js` adds them and the page reloads once on the first visit. A private window that blocks service workers cannot run the machine |
@@ -160,13 +193,32 @@ The built files are `qemu`, `xterm`, `xterm-pty`, `fflate` and `image`. They are
 
 The workflow in `cyber-labs-kali64` keeps two release files there. QEMU is rebuilt only when `browser-vm64/qemu/` changes. The machine image is rebuilt when anything in `browser-vm64/` changes. To rebuild the image with fresh Kali packages, change the number in `browser-vm64/VERSION`.
 
+### Known problem: the machine can stop
+
+During long, heavy work this machine sometimes stops for good: no new output, no error, the page still says Running, and the browser uses no processor time. In test loops (`tshark`, `gcc`, a Python import and `nmap`, over and over) it happened after 2 to 20 minutes. Short work such as the COSC 332 answer key (3 minutes) ran without it. Start over brings the machine back. The folder `~/labs` survives only if Save my files was pressed, so students should press it often.
+
+What is known on November 28, 2026: the page's own thread is healthy, the emulated processor is idle and waiting, and QEMU's main loop thread sits in a call that it sends to the page's thread about 1,400 times per second. Ruled out by test: memory, Python, the disk reader waiting on its own background request, the way the page's thread is woken (`Atomics.waitAsync`), and QEMU starting and ending its disk helper threads. The cause is not found yet. Until it is fixed, the 32-bit machine is the one to give a class. It now runs every lab this one runs, including COSC 332.
+
+### Warm Python
+
+On this emulator most of the time a Python lab took was spent importing libraries. Measured on the published site on November 28, 2026: `import pandas` 1 minute 56 seconds, `import matplotlib.pyplot` 4 minutes 35 seconds, `import flask` 50 seconds.
+
+The machine now starts a small server when it boots (`/usr/local/lib/lab/pywarm.py`). It imports pandas, numpy, matplotlib, flask and the common standard modules once, before the start-up state is saved, so they are in memory when a student opens the page. `/usr/local/bin/python3` is a small client written in C (`pyfast.c`). It passes its terminal, arguments, folder and environment to the server, which runs the program in a copy of itself (a fork) under the student's account and returns the exit status. Ctrl-C and other signals are passed on.
+
+With it, a script that imports all four libraries starts in 2 seconds in the tab. The cost is a larger saved state: 80 MB, up from 56 MB.
+
+The client starts the real `/usr/bin/python3` for anything the server does not handle (options other than `-c`, `-m`, `-u`, `-B` and `-q`), when the server is not running, and when `LAB_PY=cold` is set. `python` is the same command. matplotlib's font list, which takes minutes to build here, is built in the Dockerfile for both tab machines.
+
 ### Parts written for this machine
 
 | Part | What it does |
 | --- | --- |
 | `docs/kali-browser64/lab-disk.js` and `browser-vm64/tools/make-disk.py` | A disk that downloads itself. QEMU sees one file. A read of a part that is not there yet fetches that piece, and the next two pieces follow in the background. A failed request is tried again up to four times |
 | `docs/kali-browser64/sw.js` | The service worker that makes the page cross-origin isolated on GitHub Pages |
-| `browser-vm64/rootfs/usr/bin/systemctl` | A `systemctl` in shell for a machine without systemd: start, stop, restart, reload, status, is-active, is-enabled, enable, disable |
+| `browser-vm64/rootfs/usr/bin/systemctl` | A `systemctl` in shell for a machine without systemd: start, stop, restart, reload, status, is-active, is-enabled, enable, disable. After a start it waits until the service listens on its port, so a request sent right away is answered |
+| `browser-vm64/rootfs/usr/local/lib/lab/pywarm.py` and `usr/local/src/lab/pyfast.c` | Warm Python, described above |
+| `rootfs/usr/local/bin/hashcat` in both machine folders | The hashcat front end for John the Ripper |
+| `browser-vm64/tools/strip-wasm-debug.py` | Removes 28 MB of debug data from QEMU's file before it goes on the site: the packed file is 3.4 MB, down from 14.6 MB |
 | `browser-vm64/make-state.py` | Saves the state and tests it. It saves from a stopped machine, because one state saved from a running machine crashed in the kernel's timer code when it was loaded |
 | `browser-vm64/rootfs/usr/local/sbin/lab-start` | Finishes the start in the tab. The saved machine waits for one line from the page, then sets the clock from the browser, opens `~/labs` and shows the welcome text |
 | `0001-9pfs-translate-emscripten-error-codes.patch` | QEMU sent the browser toolchain's error numbers to the guest. A missing file reached Linux as "Channel number out of range", so nothing could be created in `~/labs`. The patch translates all 131 codes |
@@ -308,13 +360,13 @@ On November 26, 2026 the lab handouts in the instructor's course folders were re
 | MAC 237, 246, 247 | 12 graded labs: system and network steps | Kali terminal or desktop | 37 of 39 checked steps pass: `systemctl` for ssh and Apache, `sshd -T`, users and password aging, `nft`, `iptables`, `tshark` capture and the evidence captures, `nmap -sV`, `gcc`, OpenSSL keys and certificates, Apache with TLS, `gpg`, pandas and flask, `apt`. See the two notes below |
 | MAC 247 | 8 graded Python scripts | Any Kali cloud machine | All 8 run to the end |
 | MAC 237, 246, 247 | 14 notebooks | Google Colab, or `python3` on Kali | 12 run to the end. 2 stop at a check that asks the student to fill in fields, as designed |
-| COSC 332 (Bowie State) | 4 graded labs, 7 targets | Kali terminal or desktop, or Kali in this tab, 64-bit | All 23 answer-key steps pass on the cloud image: `strings`, `ltrace`, `strace`, `objdump`, `gdb`, byte patching, the `ptrace` bypasses, `upx`. They also pass in Kali in this tab, 64-bit, where the whole key took 195 seconds |
+| COSC 332 (Bowie State) | 4 graded labs, 7 targets | Kali terminal or desktop, or either tab machine | All 23 answer-key steps pass on the cloud image: `strings`, `ltrace`, `strace`, `objdump`, `gdb`, byte patching, the `ptrace` bypasses, `upx`. They also pass in Kali in this tab, 64-bit, where the whole key took 195 seconds. In the 32-bit Kali in this tab all 23 pass through the lab runner, in 126 seconds on a local copy of the site |
 | COSC 435, 442 | Lab 1 scanning, Lab 2 certificates, Lab 3 access control | Kali desktop with a target | `nmap` against 192.168.56.101, the OpenSSL and Apache steps and the user and group steps pass. Maltego needs `lab-install osint` and its own account. FreeRADIUS installs; its start was checked only with the IPv6 listener removed, because the test computer has no IPv6 |
 | COSC 435, 442 | Lab 4 firewall and intrusion detection | Kali desktop with a target | Snort installs and DVWA is on the target. pfSense is a separate operating system and is not included |
-| COSC 489 | Lab 2 web attacks, Lab 3 Metasploit, Lab 4 passwords | Kali desktop with a target | The DVWA SQL injection and `sqlmap` steps pass. `vsftpd_234_backdoor` gives a root session on the target. `john`, `hashcat`, `hashid` and `hydra` pass. `aircrack-ng` is installed; the course capture files were not tested |
+| COSC 489 | Lab 2 web attacks, Lab 3 Metasploit, Lab 4 passwords | Kali desktop with a target | The DVWA SQL injection and `sqlmap` steps pass. `vsftpd_234_backdoor` gives a root session on the target. `john`, `hashcat`, `hashid` and `hydra` pass. `aircrack-ng` is installed; the course capture files were not tested. In the tab machines `hashcat` is the John the Ripper front end: the word list attack and `--show` work there, the lab's 8-character mask and the Wi-Fi attack do not finish |
 | COSC 489 | Lab 1 open source intelligence | Any Kali cloud machine | `whois` and `dig` pass. theHarvester and recon-ng come with `lab-install osint` and were not run |
-| COSC 112, 113 | Java exercises | Any Kali cloud machine | `lab-install java`, then `javac` and `java` compile and run a generics class |
-| COSC 330, 414 | C and C++ programs | Any Kali cloud machine | `gcc` and `g++` build and run, including `fork`. Kali in this tab has `gcc` but not `g++` |
+| COSC 112, 113 | Java exercises | Any Kali machine | On a cloud machine run `lab-install java` first. Both tab machines have `javac` and `java` (see The Java kit in both tab machines). A generics class compiles and runs on each |
+| COSC 330, 414 | C and C++ programs | Any Kali machine | `gcc` and `g++` build and run, including `fork`, on the cloud image and in both tab machines |
 | MAC 233 | 11 in-class labs, 4 lab projects | Not covered | The labs need two Windows servers on one private network, snapshots and Hyper-V. Each Windows machine here is a single server |
 
 Not covered by these tests: anything inside a real codespace (the tests ran in a local container), Ghidra and edb (they need the desktop), Burp Suite, and the hosted CompTIA labs for COSC 435, which run on the vendor's own site.
@@ -324,7 +376,29 @@ Two things differ from an older Kali lab computer:
 - `sshd -T` in OpenSSH 10.6 prints setting names with capital letters, for example `PermitRootLogin`. A handout that filters with `grep -E "^(permitrootlogin|passwordauthentication)"` finds nothing. Use `grep -iE`.
 - Kali no longer has a `pev` package. The same tools are in `readpe`, which is installed. Kali has no `gh` package either, so `gh` is installed from GitHub's own package source.
 
-The COSC 332 targets are 64-bit programs. They run on the Kali cloud machines and in Kali in this tab, 64-bit. They cannot run in the 32-bit Kali in this tab. Ghidra and edb need a desktop, so those two steps stay on the Kali desktop.
+The COSC 332 targets are 64-bit programs. They run on the Kali cloud machines and in both tab machines: directly in Kali in this tab, 64-bit, and through the lab runner in the 32-bit one. Ghidra and edb need a desktop, so those two steps stay on the Kali desktop.
+
+### The two tab machines, lab by lab
+
+The same lab pack ran in both tab machines in headless Chrome. Times are for the whole set on an emulated processor. The COSC 332 time for the 32-bit machine is from a local copy of the site with these changes. The other 32-bit numbers and the 64-bit COSC 332, Java and C numbers are from the published site on November 27 and 28, 2026, before these changes.
+
+| Labs | Kali in this tab (32-bit) | Kali in this tab, 64-bit |
+| --- | --- | --- |
+| COSC 332 answer key, 23 steps | 23 pass in 126 seconds | 23 pass in 177 seconds |
+| MAC 237, 246, 247: 36 Python solutions, 36 starters, 8 graded scripts, 14 notebooks | All pass in 428 seconds. 2 notebooks stop at a fill-in check, as designed | Not run to the end (see Known problem: the machine can stop). A script that imports pandas, numpy, matplotlib and flask starts in 2 seconds |
+| MAC 237, 246, 247: 39 system and network steps | 36 pass. `gh`, `whois` and `dig` need the internet | The first 29 steps pass, with `gh` the only failure. The run then stopped (see Known problem). The remaining 10 were not run in the tab |
+| COSC 112, 113: compile and run a Java generics class | `javac` 100 seconds, `java` 15 seconds | `javac` 80 to 143 seconds, `java` 21 seconds |
+| COSC 330, 414: C with file output, C++ with `fork` | `gcc` 20 seconds, `g++` 77 seconds | `gcc` 29 seconds, `g++` 204 seconds |
+| COSC 489 Lab 4: `john`, `hashid`, `hydra`, `aircrack-ng`, `hashcat` word list attack | `john`, `hashid`, `hydra` and `aircrack-ng` pass in the tab. The `hashcat` front end was tested in the machine's image | All were tested in the machine's image, not yet in the tab |
+
+What a browser tab cannot do, on either machine:
+
+- Steps that need the internet: `git push`, `gh`, `apt`, `whois`, `dig`, and the open source intelligence lab. The tab machines have no network outside themselves.
+- Metasploit, Burp Suite, Maltego, Ghidra and edb. They need a desktop, gigabytes of files, or both.
+- A second machine to attack other than the SSH and web servers that `lab-targets` starts. Metasploitable 2, DVWA and pfSense are on the Kali desktop with a target, or outside this project.
+- hashcat at graphics card speed (see The hashcat command in the tab machines).
+- `tshark` starts in about 2 minutes in the 64-bit machine. `tcpdump` starts in seconds there.
+- The MAC 233 Windows labs.
 
 ### What the Kali machines add for these labs
 
@@ -351,6 +425,7 @@ The COSC 332 targets are 64-bit programs. They run on the Kali cloud machines an
 docs/                          The GitHub Pages site
 docs/kali-browser/             Page for Kali in this tab (the image files are built, not stored)
 browser-vm/                    Build files for the machine that runs in the browser
+browser-vm/x64/                Patch for the x86-64 lab runner of that machine
 docs/kali-browser64/           Page for Kali in this tab, 64-bit. Published by the repository cyber-labs-kali64
 browser-vm64/                  Build files for the 64-bit machine, with the QEMU build in qemu/
 .github/workflows/pages.yml    Builds the 32-bit machine and publishes this site

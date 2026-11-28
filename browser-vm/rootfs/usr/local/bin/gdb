@@ -1,0 +1,5 @@
+#!/bin/sh
+# gdb for both kinds of program on this 32-bit machine. A 32-bit program is
+# debugged directly. An x86-64 program (the COSC 332 targets) runs in the lab
+# runner and gdb attaches to it. See /usr/local/share/lab/x64-gdb.py.
+exec /usr/bin/gdb -iex 'source /usr/local/share/lab/x64-gdb.py' "$@"

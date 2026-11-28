@@ -67,6 +67,11 @@ checks = {"gdb": "gdb --version | head -1", "strace": "strace -V | head -1", "lt
           "gcc": "gcc --version | head -1", "python3": "python3 --version", "yara": "yara --version", "readpe": "readpe --version 2>&1 | head -1"}
 for name, cmd in checks.items(): print(f"{name:8} " + run(cmd, 600).strip()[:70])
 print("debug:   " + run("printf 'int main(){return 0;}' > /tmp/w.c && gcc -o /tmp/w /tmp/w.c && gdb -q -batch -ex run /tmp/w 2>&1 | grep -c 'exited normally'", 900).strip() + " (1 means gcc and gdb work)")
+# The warm Python server started when the machine did. Wait until it has loaded
+# its libraries, so they are part of the saved state.
+print("python:  " + run("for i in $(seq 600); do [ -S /run/lab-pywarm.sock ] && break; sleep 1; done; "
+                        "cut -c1-60 /run/lab-pywarm.log; "
+                        "python3 -c 'import sys; print(\"warm start:\", \"pandas\" in sys.modules and \"matplotlib\" in sys.modules)'", 900).strip()[-110:])
 # Keep the state small: forget the file cache, then touch only the basics.
 # Free memory that still holds old data would land in the state file, so
 # fill the free memory with zeros once and release it again.

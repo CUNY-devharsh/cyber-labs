@@ -126,6 +126,16 @@ RUN useradd -m -s /bin/bash -G sudo kali \
  && printf '127.0.0.1 localhost kali\n::1 localhost ip6-localhost ip6-loopback\n' > /etc/hosts.lab
 
 COPY rootfs/ /
+# Warm Python: /usr/local/lib/lab/pywarm.py explains it. The client takes the
+# names python3 and python ahead of the real one in the search path (Kali has
+# no "python" command, and some handouts use that name). The font list that
+# matplotlib builds on first use takes minutes on the emulated processor, so
+# build it here for both accounts.
+RUN gcc -O2 -o /usr/local/bin/python3 /usr/local/src/lab/pyfast.c \
+ && ln -sf python3 /usr/local/bin/python \
+ && MPLBACKEND=Agg /usr/bin/python3 -c 'import matplotlib.pyplot' \
+ && su kali -c "MPLBACKEND=Agg /usr/bin/python3 -c 'import matplotlib.pyplot'" \
+ && ls /root/.cache/matplotlib /home/kali/.cache/matplotlib
 RUN chmod +x /usr/local/sbin/* /usr/local/bin/* /usr/bin/systemctl \
  && echo 'HISTCONTROL=ignoreboth' >> /etc/bash.bashrc \
  && echo '. /etc/lab-bashrc' >> /home/kali/.bashrc \

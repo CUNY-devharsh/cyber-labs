@@ -17,6 +17,12 @@ echo "Installed tools (checked now)"
 for t in nmap ncat tcpdump tshark hydra john sqlmap nikto gobuster ffuf smbclient openssl gpg gdb python3 gcc sshd apache2; do
   if command -v "$t" >/dev/null 2>&1 || [ -x "/usr/sbin/$t" ]; then printf '  [x] %s\n' "$t"; else printf '  [ ] %s\n' "$t"; fi
 done | column -c 78
+if [ -x /usr/local/bin/qemu-x86_64 ]; then
+  echo
+  echo "x86-64 programs (COSC 332): this kernel is 32-bit, so the lab runner starts them."
+  echo "  ./program, gdb, strace and ltrace work on them as usual, only slower."
+  echo "  gcc builds 32-bit programs. Use gcc -m64 to build an x86-64 one."
+fi
 if [ -s /etc/lab-missing-packages ]; then
   echo
   echo "Not available as 32-bit packages: $(tr '\n' ' ' < /etc/lab-missing-packages)"

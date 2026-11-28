@@ -28,6 +28,27 @@ RUN apt-get update \
  && ls -l /opt/lab-jdk/lib/javac.aot \
  && /opt/lab-jdk/bin/java -cp /tmp Warm && /opt/lab-jdk/bin/java -version && du -sh /opt/lab-jdk
 
+# The COSC 332 targets are x86-64 programs, and a 32-bit kernel cannot start
+# one. This stage builds the user-mode part of QEMU, which runs one x86-64
+# program on a 32-bit system. It has to be the 9.2 series: QEMU 10.0 removed
+# 64-bit programs on 32-bit hosts. x64/qemu-lab.patch adds the two things a
+# reverse engineering lab needs: PTRACE_TRACEME answers the way Linux does
+# (anti-debugging labs depend on it), and gdb sees and can change the result of
+# a system call at a "catch syscall" stop.
+FROM --platform=linux/386 debian:bookworm-slim AS x64run
+ARG QEMU_TAG=v9.2.4
+COPY x64/qemu-lab.patch /tmp/qemu-lab.patch
+RUN apt-get update \
+ && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+      ca-certificates git patch gcc libc6-dev make ninja-build pkg-config python3 python3-venv \
+      libglib2.0-dev zlib1g-dev \
+ && git clone --depth 1 --branch "${QEMU_TAG}" https://github.com/qemu/qemu /qemu \
+ && cd /qemu && patch -p1 < /tmp/qemu-lab.patch \
+ && ./configure --target-list=x86_64-linux-user --static --disable-docs --disable-tools \
+      --disable-system --disable-plugins --disable-werror --disable-debug-info \
+ && make -j"$(nproc)" \
+ && strip -o /qemu-x86_64 build/qemu-x86_64 && ls -l /qemu-x86_64
+
 FROM --platform=linux/386 kalilinux/kali-rolling:latest AS vm
 
 ARG DEBIAN_FRONTEND=noninteractive
@@ -103,6 +124,8 @@ ARG LAB_TOOLS="\
 RUN echo "wireshark-common wireshark-common/install-setuid boolean true" | debconf-set-selections \
  && chmod +x /usr/local/sbin/lab-apt-install \
  && lab-apt-install ${LAB_TOOLS} \
+ && lab-apt-install libc6-amd64 libc6-dev-amd64 lib64gcc-s1 lib64stdc++6 \
+      "lib64gcc-$(gcc -dumpversion | cut -d. -f1)-dev" "lib64stdc++-$(gcc -dumpversion | cut -d. -f1)-dev" \
  && rm -f /usr/bin/*-lto-dump-* /usr/libexec/gcc/*/*/lto1 /usr/libexec/gcc/*/*/lto-wrapper \
  && rm -rf /usr/lib/python3/dist-packages/pandas/tests /usr/lib/python3/dist-packages/numpy/tests \
       /usr/lib/python3/dist-packages/numpy/*/tests /usr/lib/python3/dist-packages/matplotlib/tests \
@@ -114,6 +137,12 @@ RUN echo "wireshark-common wireshark-common/install-setuid boolean true" | debco
 
 # The small Java kit built above. /usr/local/bin has java, javac, jshell and jar.
 COPY --from=jdk /opt/lab-jdk /opt/lab-jdk
+
+# The x86-64 runner built above. The packages libc6-amd64 and lib64gcc in the
+# tool list give an x86-64 program its C library and let gcc -m64 build one.
+# /usr/lib/binfmt.d/lab-x86_64.conf makes ./program start it, and the gdb,
+# strace and ltrace commands in /usr/local/bin know about it.
+COPY --from=x64run /qemu-x86_64 /usr/local/bin/qemu-x86_64
 
 # The standard Kali account: user kali, password kali, sudo without a password.
 RUN useradd --create-home --shell /usr/bin/zsh --groups sudo kali \
@@ -128,9 +157,11 @@ RUN useradd --create-home --shell /usr/bin/zsh --groups sudo kali \
 # Files that make it a lab machine: consoles, banner, helper commands.
 COPY rootfs/ /
 RUN chmod +x /usr/local/bin/* /usr/local/sbin/* \
+ && ln -sf /usr/bin/python3 /usr/local/bin/python \
  && printf '127.0.0.1 localhost kali\n::1 localhost ip6-localhost ip6-loopback\n' > /etc/hosts.lab \
  && echo '. /etc/profile.d/lab-banner.sh' >> /etc/zsh/zshrc \
  && mkdir -p /home/kali/labs && chown -R kali:kali /home/kali \
+ && (su kali -c "MPLBACKEND=Agg python3 -c 'import matplotlib.pyplot'" && ls /home/kali/.cache/matplotlib || true) \
  && systemctl enable lab-setup.service serial-getty@hvc0.service serial-getty@ttyS0.service \
  && systemctl mask apt-daily.timer apt-daily-upgrade.timer man-db.timer e2scrub_all.timer \
       fstrim.timer dpkg-db-backup.timer logrotate.timer systemd-tmpfiles-clean.timer \

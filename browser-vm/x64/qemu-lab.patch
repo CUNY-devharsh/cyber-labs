@@ -1,0 +1,149 @@
+diff --git a/gdbstub/gdbstub.c b/gdbstub/gdbstub.c
+index b1def7e..b332c4a 100644
+--- a/gdbstub/gdbstub.c
++++ b/gdbstub/gdbstub.c
+@@ -1436,7 +1436,7 @@ static void handle_v_kill(GArray *params, void *user_ctx)
+ {
+     /* Kill the target */
+     gdb_put_packet("OK");
+-    error_report("QEMU: Terminated via GDBstub");
++    /* Lab runner: no message. gdb ends the program this way at "kill" and when it exits. */
+     gdb_exit(0);
+     gdb_qemu_exit(0);
+ }
+@@ -2089,7 +2089,7 @@ static int gdb_handle_packet(const char *line_buf)
+         break;
+     case 'k':
+         /* Kill the target */
+-        error_report("QEMU: Terminated via GDBstub");
++        /* Lab runner: no message. gdb ends the program this way at "kill" and when it exits. */
+         gdb_exit(0);
+         gdb_qemu_exit(0);
+         break;
+diff --git a/linux-user/main.c b/linux-user/main.c
+index b09af8d..53ab283 100644
+--- a/linux-user/main.c
++++ b/linux-user/main.c
+@@ -1022,6 +1022,7 @@ int main(int argc, char **argv, char **envp)
+     target_cpu_copy_regs(env, regs);
+ 
+     if (gdbstub) {
++        lab_gdb_used = true;
+         if (gdbserver_start(gdbstub) < 0) {
+             fprintf(stderr, "qemu: could not open gdbserver on %s\n",
+                     gdbstub);
+diff --git a/linux-user/syscall.c b/linux-user/syscall.c
+index 549e39e..82b3e46 100644
+--- a/linux-user/syscall.c
++++ b/linux-user/syscall.c
+@@ -9185,6 +9185,28 @@ _syscall5(int, sys_move_mount, int, __from_dfd, const char *, __from_pathname,
+            int, __to_dfd, const char *, __to_pathname, unsigned int, flag)
+ #endif
+ 
++/*
++ * Lab runner. One program cannot trace another under user-mode emulation, so
++ * ptrace is not implemented. Anti-debugging code calls PTRACE_TRACEME only to
++ * learn whether a debugger is present. Answer the way Linux does: the call
++ * works once when no debugger is attached, and fails with EPERM when one is.
++ */
++bool lab_gdb_used;
++
++static abi_long lab_ptrace(abi_long request)
++{
++    static bool traced;
++
++    if (request != 0) {             /* only PTRACE_TRACEME is answered */
++        return -TARGET_ENOSYS;
++    }
++    if (lab_gdb_used || traced) {
++        return -TARGET_EPERM;
++    }
++    traced = true;
++    return 0;
++}
++
+ /* This is an internal helper for do_syscall so that it is easier
+  * to have a single return point, so that actions, such as logging
+  * of syscall results, can be performed.
+@@ -13848,6 +13870,11 @@ static abi_long do_syscall1(CPUArchState *cpu_env, int num, abi_long arg1,
+         return do_riscv_hwprobe(cpu_env, arg1, arg2, arg3, arg4, arg5);
+ #endif
+ 
++#ifdef TARGET_NR_ptrace
++    case TARGET_NR_ptrace:
++        return lab_ptrace(arg1);
++#endif
++
+     default:
+         qemu_log_mask(LOG_UNIMP, "Unsupported syscall: %d\n", num);
+         return -TARGET_ENOSYS;
+@@ -13877,6 +13904,21 @@ abi_long do_syscall(CPUArchState *cpu_env, int num, abi_long arg1,
+     }
+ #endif
+ 
++#if defined(TARGET_X86_64)
++    /*
++     * Lab runner: at the entry stop of a caught system call a real kernel
++     * shows -ENOSYS in RAX. Do the same, then put the call number back, which
++     * a restarted call needs.
++     */
++    if (lab_gdb_used) {
++        CPUX86State *env = cpu_env;
++
++        env->regs[R_EAX] = -TARGET_ENOSYS;
++        record_syscall_start(cpu, num, arg1,
++                             arg2, arg3, arg4, arg5, arg6, arg7, arg8);
++        env->regs[R_EAX] = num;
++    } else
++#endif
+     record_syscall_start(cpu, num, arg1,
+                          arg2, arg3, arg4, arg5, arg6, arg7, arg8);
+ 
+@@ -13892,6 +13934,21 @@ abi_long do_syscall(CPUArchState *cpu_env, int num, abi_long arg1,
+                           arg3, arg4, arg5, arg6);
+     }
+ 
++#if defined(TARGET_X86_64)
++    /*
++     * Lab runner: when gdb stops at the return of a caught system call, show
++     * the result in RAX and keep a value the debugger writes there, as a real
++     * kernel does. Without this RAX still holds the call number at that stop.
++     */
++    if (lab_gdb_used && ret != -QEMU_ERESTARTSYS && ret != -QEMU_ESIGRETURN) {
++        CPUX86State *env = cpu_env;
++
++        env->regs[R_EAX] = ret;
++        record_syscall_return(cpu, num, ret);
++        return env->regs[R_EAX];
++    }
++#endif
++
+     record_syscall_return(cpu, num, ret);
+     return ret;
+ }
+diff --git a/linux-user/user-internals.h b/linux-user/user-internals.h
+index 46ffc09..7ca0a51 100644
+--- a/linux-user/user-internals.h
++++ b/linux-user/user-internals.h
+@@ -183,4 +183,7 @@ void preexit_cleanup(CPUArchState *env, int code);
+ #include "target_cpu.h"
+ #include "target_structs.h"
+ 
++/* Lab runner: true when this program runs under a debugger (-g or QEMU_GDB). */
++extern bool lab_gdb_used;
++
+ #endif
+diff --git a/tests/meson.build b/tests/meson.build
+index 907a4c1..1e15435 100644
+--- a/tests/meson.build
++++ b/tests/meson.build
+@@ -77,7 +77,8 @@ endif
+ subdir('decode')
+ 
+ if 'CONFIG_TCG' in config_all_accel
+-  subdir('fp')
++  # Lab runner: the floating point tests need two more source trees from the
++  # network, and this build does not run them.
+   subdir('tcg/plugins')
+ endif
+ 

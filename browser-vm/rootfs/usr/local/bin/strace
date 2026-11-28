@@ -1,0 +1,98 @@
+#!/bin/bash
+# strace for both kinds of program on this 32-bit machine.
+#
+# A 32-bit program goes to the real strace. An x86-64 program (the COSC 332
+# targets) cannot be traced by a 32-bit kernel, so the lab runner
+# (qemu-x86_64 -strace) prints its system calls instead. This script puts that
+# output in strace's layout and supports the options a lab uses:
+# -f, -o FILE, and -e trace=NAME,... with the classes %file, %process, %network.
+real=/usr/bin/strace
+runner=/usr/local/bin/qemu-x86_64
+
+is_x64() {  # an ELF file of class 64 for machine 0x3e
+  [ -f "$1" ] && [ "$(od -An -tx1 -N5 "$1" 2>/dev/null | tr -d ' \n')" = 7f454c4602 ] \
+    && [ "$(od -An -tx1 -j18 -N2 "$1" 2>/dev/null | tr -d ' \n')" = 3e00 ]
+}
+
+follow=0 out="" filter="" prog="" args=("$@") i=0
+while [ $i -lt ${#args[@]} ]; do
+  a=${args[$i]}
+  case "$a" in
+    -e|-o|-p|-s|-u|-a|-E|-P|-I|-b|-O|-S|-X|-U)
+      i=$((i + 1)); v=${args[$i]}
+      [ "$a" = -o ] && out=$v
+      [ "$a" = -e ] && filter=$v ;;
+    -o*) out=${a#-o} ;;
+    -e*) filter=${a#-e} ;;
+    --output=*) out=${a#--output=} ;;
+    --trace=*) filter="trace=${a#--trace=}" ;;
+    -f|-ff|--follow-forks) follow=1 ;;
+    --) i=$((i + 1)); prog=${args[$i]}; break ;;
+    -*) ;;
+    *) prog=$a; break ;;
+  esac
+  i=$((i + 1))
+done
+path=$(command -v -- "$prog" 2>/dev/null)
+if [ -z "$prog" ] || ! is_x64 "$path"; then exec "$real" "$@"; fi
+rest=("${args[@]:$((i + 1))}")
+
+# -e trace=a,b or -e a,b picks the calls to show. Other -e kinds are ignored.
+names=""
+case "$filter" in
+  trace=*|t=*) names=${filter#*=} ;;
+  *=*) names="" ;;
+  *) names=$filter ;;
+esac
+file="open openat openat2 creat stat lstat newfstatat statx access faccessat faccessat2 execve execveat readlink readlinkat chdir mkdir mkdirat rmdir unlink unlinkat rename renameat renameat2 link linkat symlink symlinkat chmod fchmodat chown lchown fchownat truncate statfs utime utimes utimensat mknod mknodat getcwd inotify_add_watch"
+process="execve execveat fork vfork clone clone3 exit exit_group wait4 waitid kill tkill tgkill arch_prctl prctl"
+network="socket socketpair bind listen accept accept4 connect getsockname getpeername sendto recvfrom sendmsg recvmsg sendmmsg recvmmsg shutdown setsockopt getsockopt"
+names=$(echo "$names" | tr ',' ' ' | sed "s/%file/$file/; s/%process/$process/; s/%network/$network/; s/%net/$network/")
+
+fifo=$(mktemp -u /tmp/lab-strace.XXXXXX)
+mkfifo "$fifo" || exit 1
+trap 'rm -f "$fifo"' EXIT
+show() {  # the runner's lines, in strace's layout
+  awk -v names="$names" -v follow="$follow" '
+    BEGIN {
+      n = split(names, list, " "); for (k = 1; k <= n; k++) want[list[k]] = 1
+      m = split("1 EPERM 2 ENOENT 3 ESRCH 4 EINTR 5 EIO 8 ENOEXEC 9 EBADF 10 ECHILD 11 EAGAIN 12 ENOMEM 13 EACCES 14 EFAULT 17 EEXIST 20 ENOTDIR 21 EISDIR 22 EINVAL 25 ENOTTY 28 ENOSPC 32 EPIPE 38 ENOSYS 95 EOPNOTSUPP 111 ECONNREFUSED", e, " ")
+      for (k = 1; k < m; k += 2) err[e[k]] = e[k + 1]
+    }
+    {
+      line = $0; pid = ""
+      if (match(line, /^[0-9]+ /)) { pid = substr(line, 1, RLENGTH - 1); line = substr(line, RLENGTH + 1) }
+      call = line; sub(/\(.*/, "", call)
+      if (n > 0 && !(call in want)) next
+      out = ""; quoted = 0; len = length(line)      # a space after each comma outside a string
+      for (c = 1; c <= len; c++) {
+        ch = substr(line, c, 1)
+        if (ch == "\\" && quoted) { out = out ch substr(line, c + 1, 1); c++; continue }
+        if (ch == "\"") quoted = !quoted
+        out = out ch
+        if (ch == "," && !quoted && substr(line, c + 1, 1) != " ") out = out " "
+      }
+      line = out
+      sub(/\(-100, /, "(AT_FDCWD, ", line)
+      if (match(line, / = -1 errno=[0-9]+ /)) {
+        num = substr(line, RSTART + 12, RLENGTH - 13)
+        line = substr(line, 1, RSTART - 1) " = -1 " ((num in err) ? err[num] : "errno=" num) " " substr(line, RSTART + RLENGTH)
+      }
+      if (first == "") first = pid
+      print ((follow && pid != first) ? "[pid " pid "] " : "") line; fflush()
+    }'
+}
+note="strace: x86-64 program on a 32-bit machine, traced by the lab runner (qemu-x86_64 -strace)"
+first="execve(\"$prog\", [\"$prog\"$(for r in "${rest[@]}"; do printf ', "%s"' "$r"; done)], $(printf '0x%x' $((RANDOM * 4096 + 0x7ffc00000000))) /* $(env | wc -l) vars */) = 0"
+case " $names " in *" execve "*|"  ") ;; *) first="" ;; esac
+if [ -n "$out" ]; then
+  { [ -n "$first" ] && echo "$first"; show < "$fifo"; } > "$out" &
+else
+  echo "$note" >&2
+  { [ -n "$first" ] && echo "$first"; show < "$fifo"; } >&2 &
+fi
+"$runner" -strace -D "$fifo" "$path" "${rest[@]}"
+rc=$?
+wait
+if [ -n "$out" ]; then echo "+++ exited with $rc +++" >> "$out"; else echo "+++ exited with $rc +++" >&2; fi
+exit $rc
