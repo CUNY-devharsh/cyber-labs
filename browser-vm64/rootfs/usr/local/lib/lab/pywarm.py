@@ -27,10 +27,12 @@ import threading
 import traceback
 
 SOCKET = "/run/lab-pywarm.sock"
+CLIENT = "/usr/local/bin/python3"
 PRELOAD = """json csv re math random datetime time collections itertools functools hashlib hmac
 secrets base64 binascii string textwrap argparse subprocess shutil pathlib glob tempfile ssl
 sqlite3 urllib.request urllib.parse http.server http.client logging unittest typing dataclasses
 enum statistics decimal fractions pprint copy pickle zlib gzip zipfile code codeop readline
+multiprocessing multiprocessing.spawn concurrent.futures
 rlcompleter runpy site getpass platform uuid ipaddress operator bisect heapq queue
 numpy pandas matplotlib matplotlib.pyplot flask""".split()
 
@@ -105,6 +107,15 @@ def fresh_state(env):
             sys.modules["matplotlib"].use(env["MPLBACKEND"])
         except Exception:
             pass
+    # A program that starts another Python with sys.executable should get a warm
+    # one too. multiprocessing is the exception: it hands extra open files to
+    # the interpreter it starts, which only the real one accepts.
+    try:
+        import multiprocessing.spawn
+        multiprocessing.spawn.set_executable(sys.executable)
+    except Exception:
+        pass
+    sys.executable = CLIENT
     site.USER_SITE = site.USER_BASE = None
     user_site = site.getusersitepackages()
     if os.path.isdir(user_site) and user_site not in sys.path:

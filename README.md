@@ -129,7 +129,7 @@ The COSC 332 targets are x86-64 programs. A 32-bit kernel cannot start one, and 
 
 Each front end prints one line that says the lab runner is in use. Limits: an x86-64 program runs on two emulators stacked, so it is slow. `strace -p` and `gdb -p` cannot attach to an x86-64 program that is already running. A library built for the `LD_PRELOAD` exercise needs `gcc -m64`.
 
-On November 28, 2026 all 23 steps of the COSC 332 answer key passed in this machine in 126 seconds, in headless Chrome against a local copy of the site. Before this change 11 passed.
+On November 28, 2026 all 23 steps of the COSC 332 answer key passed in this machine on the published site, in 147 and 155 seconds in two runs in headless Chrome. Before this change 11 passed.
 
 ## The hashcat command in the tab machines
 
@@ -197,7 +197,7 @@ The workflow in `cyber-labs-kali64` keeps two release files there. QEMU is rebui
 
 During long work this machine sometimes stopped for good: no new output, the page still said Running, and the browser used no processor time. Start over brings the machine back. The folder `~/labs` survives only if Save my files was pressed, so students should press it often.
 
-One cause is found and fixed. When the machine changed a file in `~/labs`, QEMU set the file's time the way Linux expects: a marker for "now" or "leave it" in the nanoseconds, and any value at all in the seconds. The browser toolchain (Emscripten 3.1.50) does not know the markers and reads the seconds. Sometimes they were huge, and the file got a time that no date can hold. The next look at that file raised an error on the page's own thread, in the middle of a call from QEMU. After that the page's thread answered no call from QEMU again, and everything waited. `vm64.js` now refuses such a time when it is set and when it is read. Before the fix, the COSC 332 answer key run with a progress file in `~/labs` stopped 2 times out of 2. After it, the run passed all 23 steps.
+One cause is found and fixed. When the machine changed a file in `~/labs`, QEMU set the file's time the way Linux expects: a marker for "now" or "leave it" in the nanoseconds, and any value at all in the seconds. The browser toolchain (Emscripten 3.1.50) does not know the markers and reads the seconds. Sometimes they were huge, and the file got a time that no date can hold. The next look at that file raised an error on the page's own thread, in the middle of a call from QEMU. After that the page's thread answered no call from QEMU again, and everything waited. `vm64.js` now refuses such a time when it is set and when it is read. Before the fix, the COSC 332 answer key run with a progress file in `~/labs` stopped 2 times out of 2. After it, the run passed all 23 steps. On the published site the system and Python sets then ran for 58 minutes without a stop, which no earlier run of that length did.
 
 Two other kinds of stop are not fixed. Both came in a test loop that never touches `~/labs` (`tshark`, `gcc`, a Python import and `nmap`, over and over), after 2 to 20 minutes. In one, a worker thread ended with the error `Uncaught Infinity`, which is how this toolchain signals a jump out of emulated code that nothing caught. In the other there was no error at all: the emulated processor was idle, and QEMU's main loop sat in one of the calls it sends to the page's thread about 1,400 times per second. Ruled out by test for these: memory, Python, the disk reader, the way the page's thread is woken (`Atomics.waitAsync`), and QEMU starting and ending its disk helper threads.
 
@@ -211,7 +211,7 @@ The machine now starts a small server when it boots (`/usr/local/lib/lab/pywarm.
 
 With it, a script that imports all four libraries starts in 2 seconds in the tab. The cost is a larger saved state: 80 MB, up from 56 MB.
 
-The client starts the real `/usr/bin/python3` for anything the server does not handle (options other than `-c`, `-m`, `-u`, `-B` and `-q`), when the server is not running, and when `LAB_PY=cold` is set. `python` is the same command. matplotlib's font list, which takes minutes to build here, is built in the Dockerfile for both tab machines.
+The client starts the real `/usr/bin/python3` for anything the server does not handle (options other than `-c`, `-m`, `-u`, `-B` and `-q`), when the server is not running, and when `LAB_PY=cold` is set. `python` is the same command. A program that starts another Python through `sys.executable` gets a warm one too. matplotlib's font list, which takes minutes to build here, is built in the Dockerfile for both tab machines.
 
 ### Parts written for this machine
 
@@ -365,7 +365,7 @@ On November 26, 2026 the lab handouts in the instructor's course folders were re
 | MAC 237, 246, 247 | 12 graded labs: system and network steps | Kali terminal or desktop | 37 of 39 checked steps pass: `systemctl` for ssh and Apache, `sshd -T`, users and password aging, `nft`, `iptables`, `tshark` capture and the evidence captures, `nmap -sV`, `gcc`, OpenSSL keys and certificates, Apache with TLS, `gpg`, pandas and flask, `apt`. See the two notes below |
 | MAC 247 | 8 graded Python scripts | Any Kali cloud machine | All 8 run to the end |
 | MAC 237, 246, 247 | 14 notebooks | Google Colab, or `python3` on Kali | 12 run to the end. 2 stop at a check that asks the student to fill in fields, as designed |
-| COSC 332 (Bowie State) | 4 graded labs, 7 targets | Kali terminal or desktop, or either tab machine | All 23 answer-key steps pass on the cloud image: `strings`, `ltrace`, `strace`, `objdump`, `gdb`, byte patching, the `ptrace` bypasses, `upx`. They also pass in Kali in this tab, 64-bit, where the whole key took 195 seconds. In the 32-bit Kali in this tab all 23 pass through the lab runner, in 126 seconds on a local copy of the site |
+| COSC 332 (Bowie State) | 4 graded labs, 7 targets | Kali terminal or desktop, or either tab machine | All 23 answer-key steps pass on the cloud image: `strings`, `ltrace`, `strace`, `objdump`, `gdb`, byte patching, the `ptrace` bypasses, `upx`. They also pass in Kali in this tab, 64-bit, where the whole key took 195 seconds. In the 32-bit Kali in this tab all 23 pass through the lab runner, in about 150 seconds on the published site |
 | COSC 435, 442 | Lab 1 scanning, Lab 2 certificates, Lab 3 access control | Kali desktop with a target | `nmap` against 192.168.56.101, the OpenSSL and Apache steps and the user and group steps pass. Maltego needs `lab-install osint` and its own account. FreeRADIUS installs; its start was checked only with the IPv6 listener removed, because the test computer has no IPv6 |
 | COSC 435, 442 | Lab 4 firewall and intrusion detection | Kali desktop with a target | Snort installs and DVWA is on the target. pfSense is a separate operating system and is not included |
 | COSC 489 | Lab 2 web attacks, Lab 3 Metasploit, Lab 4 passwords | Kali desktop with a target | The DVWA SQL injection and `sqlmap` steps pass. `vsftpd_234_backdoor` gives a root session on the target. `john`, `hashcat`, `hashid` and `hydra` pass. `aircrack-ng` is installed; the course capture files were not tested. In the tab machines `hashcat` is the John the Ripper front end: the word list attack and `--show` work there, the lab's 8-character mask and the Wi-Fi attack do not finish |
@@ -385,16 +385,16 @@ The COSC 332 targets are 64-bit programs. They run on the Kali cloud machines an
 
 ### The two tab machines, lab by lab
 
-The same lab pack ran in both tab machines in headless Chrome. Times are for the whole set on an emulated processor. The COSC 332 time for the 32-bit machine is from a local copy of the site with these changes. The other 32-bit numbers and the 64-bit COSC 332, Java and C numbers are from the published site on November 27 and 28, 2026, before these changes.
+The same lab pack ran in both tab machines in headless Chrome, on the published site, on November 28, 2026, after these changes. Times are for the whole set on an emulated processor. The 64-bit Java and C times are from the day before. The whole pack took 24 minutes on the 32-bit machine. On the 64-bit machine the system and Python sets alone took 58 minutes.
 
 | Labs | Kali in this tab (32-bit) | Kali in this tab, 64-bit |
 | --- | --- | --- |
-| COSC 332 answer key, 23 steps | 23 pass in 126 seconds | 23 pass in 177 seconds |
-| MAC 237, 246, 247: 36 Python solutions, 36 starters, 8 graded scripts, 14 notebooks | All pass in 428 seconds. 2 notebooks stop at a fill-in check, as designed | Not run to the end (see Known problem: the machine can stop). A script that imports pandas, numpy, matplotlib and flask starts in 2 seconds |
-| MAC 237, 246, 247: 39 system and network steps | 36 pass. `gh`, `whois` and `dig` need the internet | The first 29 steps pass, with `gh` the only failure. The run then stopped (see Known problem). The remaining 10 were not run in the tab |
-| COSC 112, 113: compile and run a Java generics class | `javac` 100 seconds, `java` 15 seconds | `javac` 80 to 143 seconds, `java` 21 seconds |
-| COSC 330, 414: C with file output, C++ with `fork` | `gcc` 20 seconds, `g++` 77 seconds | `gcc` 29 seconds, `g++` 204 seconds |
-| COSC 489 Lab 4: `john`, `hashid`, `hydra`, `aircrack-ng`, `hashcat` word list attack | `john`, `hashid`, `hydra` and `aircrack-ng` pass in the tab. The `hashcat` front end was tested in the machine's image | All were tested in the machine's image, not yet in the tab |
+| COSC 332 answer key, 23 steps | 23 pass in 155 seconds | 23 pass in 267 seconds, with a progress file written to `~/labs` every 20 seconds |
+| MAC 237, 246, 247: 36 Python solutions, 36 starters, 8 graded scripts, 14 notebooks | All pass in 475 seconds. 2 notebooks stop at a fill-in check, as designed | All 36 solutions pass and all 36 starters run. 7 of 8 graded scripts end; `MAC247_LAB3_S11_Crypto_Requirements.py` did not end within the test's 3 minutes. 9 notebooks run to the end and 2 stop at the fill-in check. The other 3 were not run, because the test's 4 minute limit for one notebook ended the run. 26 minutes for the set |
+| MAC 237, 246, 247: 39 system and network steps | 37 pass in 10 minutes. `gh`, `whois` and `dig` need the internet | 36 pass in 32 minutes. `gh`, `whois` and `dig` need the internet. The `tshark` capture step failed on the published site: on this slow machine its 8 second capture ended before the request was sent. It passed on a local copy |
+| COSC 112, 113: compile and run a Java generics class | `javac` 75 seconds, `java` 8 seconds | `javac` 80 to 143 seconds, `java` 21 seconds |
+| COSC 330, 414: C with file output, C++ with `fork` | `gcc` 15 seconds, `g++` 79 seconds | `gcc` 29 seconds, `g++` 204 seconds |
+| COSC 489 Lab 4: `john`, `hashid`, `aircrack-ng`, `hashcat` word list attack | Pass in the tab, with `hashcat` as the John the Ripper front end | Pass in the tab, with `hashcat` as the John the Ripper front end |
 
 What a browser tab cannot do, on either machine:
 
