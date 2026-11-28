@@ -195,9 +195,13 @@ The workflow in `cyber-labs-kali64` keeps two release files there. QEMU is rebui
 
 ### Known problem: the machine can stop
 
-During long, heavy work this machine sometimes stops for good: no new output, no error, the page still says Running, and the browser uses no processor time. In test loops (`tshark`, `gcc`, a Python import and `nmap`, over and over) it happened after 2 to 20 minutes. Short work such as the COSC 332 answer key (3 minutes) ran without it. Start over brings the machine back. The folder `~/labs` survives only if Save my files was pressed, so students should press it often.
+During long work this machine sometimes stopped for good: no new output, the page still said Running, and the browser used no processor time. Start over brings the machine back. The folder `~/labs` survives only if Save my files was pressed, so students should press it often.
 
-What is known on November 28, 2026: the page's own thread is healthy, the emulated processor is idle and waiting, and QEMU's main loop thread sits in a call that it sends to the page's thread about 1,400 times per second. Ruled out by test: memory, Python, the disk reader waiting on its own background request, the way the page's thread is woken (`Atomics.waitAsync`), and QEMU starting and ending its disk helper threads. The cause is not found yet. Until it is fixed, the 32-bit machine is the one to give a class. It now runs every lab this one runs, including COSC 332.
+One cause is found and fixed. When the machine changed a file in `~/labs`, QEMU set the file's time the way Linux expects: a marker for "now" or "leave it" in the nanoseconds, and any value at all in the seconds. The browser toolchain (Emscripten 3.1.50) does not know the markers and reads the seconds. Sometimes they were huge, and the file got a time that no date can hold. The next look at that file raised an error on the page's own thread, in the middle of a call from QEMU. After that the page's thread answered no call from QEMU again, and everything waited. `vm64.js` now refuses such a time when it is set and when it is read. Before the fix, the COSC 332 answer key run with a progress file in `~/labs` stopped 2 times out of 2. After it, the run passed all 23 steps.
+
+Two other kinds of stop are not fixed. Both came in a test loop that never touches `~/labs` (`tshark`, `gcc`, a Python import and `nmap`, over and over), after 2 to 20 minutes. In one, a worker thread ended with the error `Uncaught Infinity`, which is how this toolchain signals a jump out of emulated code that nothing caught. In the other there was no error at all: the emulated processor was idle, and QEMU's main loop sat in one of the calls it sends to the page's thread about 1,400 times per second. Ruled out by test for these: memory, Python, the disk reader, the way the page's thread is woken (`Atomics.waitAsync`), and QEMU starting and ending its disk helper threads.
+
+Until those are fixed, the 32-bit machine is the one to give a class. It now runs every lab this one runs, including COSC 332.
 
 ### Warm Python
 
@@ -215,6 +219,7 @@ The client starts the real `/usr/bin/python3` for anything the server does not h
 | --- | --- |
 | `docs/kali-browser64/lab-disk.js` and `browser-vm64/tools/make-disk.py` | A disk that downloads itself. QEMU sees one file. A read of a part that is not there yet fetches that piece, and the next two pieces follow in the background. A failed request is tried again up to four times |
 | `docs/kali-browser64/sw.js` | The service worker that makes the page cross-origin isolated on GitHub Pages |
+| `ownShare` in `docs/kali-browser64/vm64.js` | Makes the kali user the owner of everything in `~/labs`, and keeps file times valid (see Known problem) |
 | `browser-vm64/rootfs/usr/bin/systemctl` | A `systemctl` in shell for a machine without systemd: start, stop, restart, reload, status, is-active, is-enabled, enable, disable. After a start it waits until the service listens on its port, so a request sent right away is answered |
 | `browser-vm64/rootfs/usr/local/lib/lab/pywarm.py` and `usr/local/src/lab/pyfast.c` | Warm Python, described above |
 | `rootfs/usr/local/bin/hashcat` in both machine folders | The hashcat front end for John the Ripper |

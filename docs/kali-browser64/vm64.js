@@ -191,16 +191,39 @@
     FS.mount(FS.lookupPath("/").node.mount.type, {}, SHARE);
     shareMount = FS.lookupPath(SHARE).node.mount;
     FS.writeFile(SHARE + "/" + SIZE_FILE, term.rows + " " + term.cols + "\n");
-    var patched = [];
-    [FS.lookupPath(SHARE).node, FS.lookupPath(SHARE + "/" + SIZE_FILE).node].forEach(function (node) {
+    var patched = [], link = SHARE + "/.lab-link";
+    FS.symlink(SIZE_FILE, link);
+    var kinds = [FS.lookupPath(SHARE).node, FS.lookupPath(SHARE + "/" + SIZE_FILE).node, FS.lookupPath(link, { follow: false }).node];
+    FS.unlink(link);
+    kinds.forEach(function (node) {
       var ops = node.node_ops;
       if (patched.indexOf(ops) !== -1) return;
       patched.push(ops);
-      var getattr = ops.getattr;
+      var getattr = ops.getattr, setattr = ops.setattr;
       ops.getattr = function (n) {
         var attr = getattr(n);
         if (n.mount === shareMount) { attr.uid = 1000; attr.gid = 1000; }
+        ["atime", "mtime", "ctime"].forEach(function (key) {
+          if (!(attr[key] instanceof Date) || isNaN(attr[key].getTime())) { attr[key] = new Date(); }
+        });
         return attr;
+      };
+      /* A time that no date can hold must never be stored. When the machine
+         changes a file in ~/labs, QEMU says "now" or "leave it" the way Linux
+         expects: a marker in the nanoseconds and anything at all in the
+         seconds. This toolchain reads the seconds anyway. Sometimes they were
+         huge, the file got a time that is not a date, and the next look at
+         that file raised an error inside the emulator that stopped the whole
+         machine for good. Treat the two markers, and any time outside the
+         years 1970 to 2100, as "now". The check in getattr above is a second
+         guard. */
+      ops.setattr = function (n, attr) {
+        if (attr && attr.timestamp !== undefined) {
+          var t = attr.timestamp, part = t - Math.floor(t / 1000) * 1000;
+          var marker = Math.abs(part - 73.741823) < 0.01;     /* 0x3fffffff or 0x3ffffffe nanoseconds */
+          if (!(t >= 0 && t < 4102444800000) || marker) { attr.timestamp = Date.now(); }
+        }
+        return setattr(n, attr);
       };
     });
   }
